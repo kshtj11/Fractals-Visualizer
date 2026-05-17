@@ -7,7 +7,7 @@ class GradientEditor {
     let w = 280;
     let h = 80;
     let x = width - w - 20;
-    let y = 145; 
+    let y = 220; 
     
     fill(Theme.PANEL_BG);
     noStroke();
@@ -58,7 +58,7 @@ class GradientEditor {
     let pal = paletteManager.current();
     let w = 280;
     let x = width - w - 20;
-    let y = 145;
+    let y = 220;
     
     let barX = x + 15;
     let barW = w - 30;

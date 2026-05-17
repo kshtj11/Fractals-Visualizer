@@ -6,6 +6,7 @@ let paramPanel;
 let switcher;
 let dimDisplay;
 let infoOverlay;
+let zoomDisplay;
 let formulaBar;
 let gradientEditor;
 
@@ -33,6 +34,7 @@ function setup() {
   switcher = new FractalSwitcher();
   dimDisplay = new DimensionDisplay();
   infoOverlay = new InfoOverlay();
+  zoomDisplay = new ZoomDisplay();
   formulaBar = new FormulaBar();
   gradientEditor = new GradientEditor();
   
@@ -65,6 +67,7 @@ function draw() {
     infoOverlay.draw();
     paramPanel.draw();
     switcher.draw();
+    zoomDisplay.draw();
     dimDisplay.draw();
     formulaBar.draw();
     gradientEditor.draw();
@@ -99,7 +102,7 @@ function mousePressed() {
     switcher.mousePressed();
     formulaBar.mousePressed();
     gradientEditor.mousePressed();
-    infoOverlay.mousePressed();
+    zoomDisplay.mousePressed();
   }
 }
 
@@ -112,8 +115,8 @@ function mouseDragged() {
     paramPanel.mouseDragged();
     return; 
   }
-  if (!hideUI && infoOverlay.draggingZoom) {
-    infoOverlay.mouseDragged();
+  if (!hideUI && zoomDisplay.draggingZoom) {
+    zoomDisplay.mouseDragged();
     return;
   }
   
@@ -131,7 +134,7 @@ function mouseReleased() {
   if (!hideUI) {
     paramPanel.mouseReleased();
     gradientEditor.mouseReleased();
-    infoOverlay.mouseReleased();
+    zoomDisplay.mouseReleased();
   }
 }
 

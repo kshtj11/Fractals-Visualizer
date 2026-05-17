@@ -4,7 +4,7 @@ class DimensionDisplay {
     let boxTargetW = 280;
     let boxH = 65;
     let x = width - boxTargetW - 20;
-    let y = 70;
+    let y = 145;
     
     fill(Theme.PANEL_BG);
     noStroke();
