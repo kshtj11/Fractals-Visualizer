@@ -2,7 +2,9 @@ class Animator {
   constructor() {
     this.active = false;
     this.h = 130;
-    this.frames = 120;
+    this.lengthSec = 4;
+    this.fps = 30;
+    this.frames = this.lengthSec * this.fps;
     this.playhead = 0;
     this.keyframes = []; 
     this.isPlaying = false;
@@ -163,6 +165,26 @@ class Animator {
     
     let renderCol = this.isRendering ? '#FF0000' : Theme.BG;
     this.drawButton(this.isRendering ? "Rendering..." : "Render Video", trackX + 220, y + 80, 140, 30, renderCol);
+    
+    let stepX = trackX + 390;
+    this.drawStepper("Length:", this.lengthSec + "s", stepX, y + 80);
+    this.drawStepper("FPS:", this.fps, stepX + 170, y + 80);
+  }
+  
+  drawStepper(label, valStr, bx, by) {
+    fill(Theme.TEXT_COLOR);
+    noStroke();
+    textAlign(RIGHT, CENTER);
+    text(label, bx - 10, by + 15);
+    
+    this.drawButton("-", bx, by, 30, 30);
+    
+    fill(Theme.TEXT_COLOR);
+    noStroke();
+    textAlign(CENTER, CENTER);
+    text(valStr, bx + 55, by + 15);
+    
+    this.drawButton("+", bx + 80, by, 30, 30);
   }
   
   drawButton(txt, bx, by, bw, bh, col = Theme.BG) {
@@ -179,13 +201,13 @@ class Animator {
   mousePressed() {
     if (this.isRendering) {
        let boxW = 500;
-       let boxH = 200;
+       let boxH = 260;
        let bx = width/2 - boxW/2;
        let by = height/2 - boxH/2;
        let btnW = 140;
        let btnH = 35;
        let btnX = width/2 - btnW/2;
-       let btnY = by + 140;
+       let btnY = by + 200;
        if (mouseX > btnX && mouseX < btnX + btnW && mouseY > btnY && mouseY < btnY + btnH) {
            this.cancelRender();
        }
@@ -204,6 +226,30 @@ class Animator {
     if (this.isInside(mouseX, mouseY, trackX, y + 80, 80, 30)) { this.isPlaying = !this.isPlaying; return true; }
     if (this.isInside(mouseX, mouseY, trackX + 100, y + 80, 100, 30)) { this.loopColors = !this.loopColors; return true; }
     if (this.isInside(mouseX, mouseY, trackX + 220, y + 80, 140, 30)) { this.startRender(); return true; }
+    
+    let stepX = trackX + 390;
+    if (this.isInside(mouseX, mouseY, stepX, y + 80, 30, 30)) {
+       this.lengthSec = Math.max(1, this.lengthSec - 1);
+       this.updateFrames(); return true;
+    }
+    if (this.isInside(mouseX, mouseY, stepX + 80, y + 80, 30, 30)) {
+       this.lengthSec = Math.min(60, this.lengthSec + 1);
+       this.updateFrames(); return true;
+    }
+    
+    let stepX2 = stepX + 170;
+    if (this.isInside(mouseX, mouseY, stepX2, y + 80, 30, 30)) {
+       if (this.fps === 60) this.fps = 30;
+       else if (this.fps === 30) this.fps = 24;
+       else if (this.fps === 24) this.fps = 12;
+       this.updateFrames(); return true;
+    }
+    if (this.isInside(mouseX, mouseY, stepX2 + 80, y + 80, 30, 30)) {
+       if (this.fps === 12) this.fps = 24;
+       else if (this.fps === 24) this.fps = 30;
+       else if (this.fps === 30) this.fps = 60;
+       this.updateFrames(); return true;
+    }
     
     if (mouseY > trackY - 20 && mouseY < trackY + 20 && mouseX > trackX - 20 && mouseX < trackX + trackW + 20) {
       this.draggingPlayhead = true;
@@ -241,6 +287,19 @@ class Animator {
     return mx >= bx && mx <= bx + bw && my >= by && my <= by + bh;
   }
   
+  updateFrames() {
+    let oldFrames = this.frames;
+    this.frames = this.lengthSec * this.fps;
+    
+    let ratio = this.frames / oldFrames;
+    for (let k of this.keyframes) {
+      k.f = Math.round(k.f * ratio);
+    }
+    this.playhead = Math.round(this.playhead * ratio);
+    this.evaluatePlayhead();
+    globalDirty = true;
+  }
+  
   startRender() {
     if (typeof CCapture === 'undefined') {
        alert("CCapture.js not loaded! Ensure you are connected to the internet.");
@@ -252,7 +311,7 @@ class Animator {
     this.playhead = 0;
     this.renderStartTime = millis();
     this.evaluatePlayhead();
-    this.capturer = new CCapture({ format: 'webm', framerate: 60, display: false });
+    this.capturer = new CCapture({ format: 'webm', framerate: this.fps, display: false });
     this.capturer.start();
   }
   
@@ -278,7 +337,7 @@ class Animator {
     rect(0, 0, width, height);
     
     let boxW = 500;
-    let boxH = 200;
+    let boxH = 260;
     let bx = width/2 - boxW/2;
     let by = height/2 - boxH/2;
     
@@ -291,12 +350,12 @@ class Animator {
     noStroke();
     textAlign(CENTER, CENTER);
     textSize(24);
-    text("RENDERING VIDEO...", width/2, by + 40);
+    text("Rendering Video...", width/2, by + 40);
     
     let barW = 400;
     let barH = 20;
     let barX = width/2 - barW/2;
-    let barY = by + 80;
+    let barY = by + 90;
     
     fill(Theme.PANEL_BG);
     stroke(Theme.BORDER);
@@ -312,7 +371,7 @@ class Animator {
     
     textSize(14);
     fill(Theme.TEXT_COLOR);
-    text(`Frame: ${this.playhead} / ${this.frames} (${Math.round(pct * 100)}%)`, width/2, barY + 35);
+    text(`Frame: ${this.playhead} / ${this.frames} (${Math.round(pct * 100)}%)`, width/2, barY + 40);
     
     let elapsed = millis() - this.renderStartTime;
     if (this.playhead > 0) {
@@ -323,15 +382,15 @@ class Animator {
       let etaSec = Math.round(etaMs / 1000);
       let mins = Math.floor(etaSec / 60);
       let secs = etaSec % 60;
-      text(`Estimated Time Remaining: ${mins}m ${secs}s`, width/2, barY + 60);
+      text(`Estimated Time Remaining: ${mins}m ${secs}s`, width/2, barY + 70);
     } else {
-      text("Calculating time remaining...", width/2, barY + 60);
+      text("Calculating time remaining...", width/2, barY + 70);
     }
     
     let btnW = 140;
     let btnH = 35;
     let btnX = width/2 - btnW/2;
-    let btnY = by + 140;
+    let btnY = by + 200;
     
     fill('#FF3333');
     rect(btnX, btnY, btnW, btnH, 8);
