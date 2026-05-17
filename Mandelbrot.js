@@ -53,13 +53,14 @@ class Mandelbrot extends Fractal {
        this.currentFormula !== this.renderedFType || curShift !== this.renderedShift || curDensity !== this.renderedDensity || globalDirty
     );
 
+    let isRender = (typeof animator !== 'undefined' && animator.isRendering);
     let camChanged = (cam.cx !== this.renderedCx || cam.cy !== this.renderedCy || cam.zoom !== this.renderedZoom);
-    let isMoving = (cam.cx !== this.lastFrameCx || cam.cy !== this.lastFrameCy || cam.zoom !== this.lastFrameZoom);
+    let isMoving = !isRender && (cam.cx !== this.lastFrameCx || cam.cy !== this.lastFrameCy || cam.zoom !== this.lastFrameZoom);
     
     this.lastFrameCx = cam.cx; this.lastFrameCy = cam.cy; this.lastFrameZoom = cam.zoom;
     
-    if (paramsChanged || (camChanged && !isMoving)) {
-       this.resolution = 4;
+    if (paramsChanged || (camChanged && !isMoving) || isRender) {
+       this.resolution = isRender ? 1 : 4;
        this.renderedCx = cam.cx; this.renderedCy = cam.cy; this.renderedZoom = cam.zoom;
        this.renderedMaxIt = curMaxIt; this.renderedER = curER; this.renderedPalette = palette;
        this.renderedFType = this.currentFormula; this.renderedShift = curShift; this.renderedDensity = curDensity;

@@ -7,6 +7,7 @@ let switcher;
 let dimDisplay;
 let infoOverlay;
 let zoomDisplay;
+let animator;
 let formulaBar;
 let gradientEditor;
 
@@ -35,6 +36,7 @@ function setup() {
   dimDisplay = new DimensionDisplay();
   infoOverlay = new InfoOverlay();
   zoomDisplay = new ZoomDisplay();
+  animator = new Animator();
   formulaBar = new FormulaBar();
   gradientEditor = new GradientEditor();
   
@@ -58,6 +60,8 @@ function draw() {
   cam.height = cvsH;
   cam.update();
   
+  if (typeof animator !== 'undefined') animator.update();
+  
   mainCanvas.background(Theme.BG);
   fractals[currentFractalIndex].render(mainCanvas, cam, paletteManager.current());
   
@@ -71,6 +75,32 @@ function draw() {
     dimDisplay.draw();
     formulaBar.draw();
     gradientEditor.draw();
+    
+    let ctaW = 120;
+    let ctaH = 40;
+    let ctaX = width / 2 - ctaW / 2;
+    let ctaY = height - ctaH - (animator.active ? animator.h + 30 : 20);
+    fill(Theme.PANEL_BG);
+    stroke(Theme.BORDER);
+    strokeWeight(1);
+    rect(ctaX, ctaY, ctaW, ctaH, 20);
+    fill(Theme.TEXT_COLOR);
+    noStroke();
+    textAlign(CENTER, CENTER);
+    textSize(Theme.FONT_SIZE_NORMAL);
+    text("🎬 Animate", ctaX + ctaW / 2, ctaY + ctaH / 2);
+    
+    animator.draw();
+  }
+  
+  if (typeof animator !== 'undefined' && animator.isRendering) {
+     animator.capturer.capture(mainCanvas.elt);
+     animator.playhead++;
+     if (animator.playhead > animator.frames) {
+        animator.finishRender();
+     } else {
+        animator.evaluatePlayhead();
+     }
   }
   
   globalDirty = false;
@@ -98,6 +128,17 @@ function keyPressed() {
 
 function mousePressed() {
   if (!hideUI) {
+    let ctaW = 120;
+    let ctaH = 40;
+    let ctaX = width / 2 - ctaW / 2;
+    let ctaY = height - ctaH - (animator.active ? animator.h + 30 : 20);
+    if (mouseX > ctaX && mouseX < ctaX + ctaW && mouseY > ctaY && mouseY < ctaY + ctaH) {
+      animator.toggle();
+      return;
+    }
+    
+    if (animator.mousePressed()) return;
+    
     paramPanel.mousePressed();
     switcher.mousePressed();
     formulaBar.mousePressed();
@@ -107,6 +148,7 @@ function mousePressed() {
 }
 
 function mouseDragged() {
+  if (!hideUI && animator.mouseDragged()) return;
   if (!hideUI && gradientEditor.draggingStop != null) {
     gradientEditor.mouseDragged();
     return;
@@ -132,6 +174,7 @@ function mouseDragged() {
 
 function mouseReleased() {
   if (!hideUI) {
+    if (animator.mouseReleased()) return;
     paramPanel.mouseReleased();
     gradientEditor.mouseReleased();
     zoomDisplay.mouseReleased();

@@ -71,19 +71,46 @@ class ParameterPanel {
       } else {
           text(p.name + ": " + valStr, 20, py);
           
-          let sliderY = py + 25;
+          let sx = 20;
+          let sy = py + 25;
+          let sw = this.paramWidth;
           
           stroke(Theme.BORDER);
-          strokeWeight(2);
-          line(20, sliderY, 20 + this.paramWidth, sliderY);
+          strokeWeight(4);
+          strokeCap(ROUND);
+          line(sx, sy, sx + sw, sy);
+          
+          if (typeof animator !== 'undefined' && animator.active && animator.keyframes.length > 0) {
+             let startVal = animator.keyframes[0].state.params[p.name];
+             let endVal = animator.keyframes[animator.keyframes.length - 1].state.params[p.name];
+             if (startVal !== undefined && endVal !== undefined && startVal !== endVal) {
+                let tStart = p.getNormalized(startVal);
+                let tEnd = p.getNormalized(endVal);
+                let xStart = sx + tStart * sw;
+                let xEnd = sx + tEnd * sw;
+                
+                let ctx = drawingContext;
+                let grad = ctx.createLinearGradient(xStart, sy, xEnd, sy);
+                grad.addColorStop(0, '#00FF00'); // Green
+                grad.addColorStop(0.5, '#FFFF00'); // Yellow
+                grad.addColorStop(1, '#FF0000'); // Red
+                
+                ctx.strokeStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(xStart, sy);
+                ctx.lineTo(xEnd, sy);
+                ctx.stroke();
+                
+                noStroke();
+                fill('#00FF00'); ellipse(xStart, sy, 6, 6);
+                fill('#FF0000'); ellipse(xEnd, sy, 6, 6);
+             }
+          }
           
           let t = (p.value - p.min) / (p.max - p.min);
           let handleX = 20 + this.paramWidth * t;
           
           stroke(Theme.ACCENT);
-          line(20, sliderY, handleX, sliderY);
-          
-          fill(Theme.ACCENT);
           noStroke();
           ellipse(handleX, sliderY, 12, 12);
           
