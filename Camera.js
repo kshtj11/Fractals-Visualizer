@@ -46,11 +46,8 @@ class Camera {
     
     this.targetZoom *= factor;
     
-    let newFocusXScr = this.width/2 + (wx - this.targetCx) * this.targetZoom;
-    let newFocusYScr = this.height/2 + (wy - this.targetCy) * this.targetZoom;
-    
-    this.targetCx += (focusXScr - newFocusXScr) / this.targetZoom;
-    this.targetCy += (focusYScr - newFocusYScr) / this.targetZoom;
+    this.targetCx = wx - (focusXScr - this.width/2) / this.targetZoom;
+    this.targetCy = wy - (focusYScr - this.height/2) / this.targetZoom;
   }
   
   screenToWorldX(x) { return this.cx + (x - this.width/2) / this.zoom; }
