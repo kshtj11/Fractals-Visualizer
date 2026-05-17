@@ -54,6 +54,7 @@ function draw() {
   
   cam.width = cvsW;
   cam.height = cvsH;
+  cam.update();
   
   mainCanvas.background(Theme.BG);
   fractals[currentFractalIndex].render(mainCanvas, cam, paletteManager.current());
@@ -98,6 +99,7 @@ function mousePressed() {
     switcher.mousePressed();
     formulaBar.mousePressed();
     gradientEditor.mousePressed();
+    infoOverlay.mousePressed();
   }
 }
 
@@ -109,6 +111,10 @@ function mouseDragged() {
   if (!hideUI && paramPanel.draggingParam != null) {
     paramPanel.mouseDragged();
     return; 
+  }
+  if (!hideUI && infoOverlay.draggingZoom) {
+    infoOverlay.mouseDragged();
+    return;
   }
   
   let cvsX = hideUI ? 0 : 280;
@@ -125,12 +131,13 @@ function mouseReleased() {
   if (!hideUI) {
     paramPanel.mouseReleased();
     gradientEditor.mouseReleased();
+    infoOverlay.mouseReleased();
   }
 }
 
 function mouseWheel(event) {
   let e = event.delta;
-  let factor = (e > 0) ? 0.9 : 1.1;
+  let factor = Math.exp(-e * 0.005);
   let cvsX = hideUI ? 0 : 280;
   let cvsY = hideUI ? 0 : 60;
   
