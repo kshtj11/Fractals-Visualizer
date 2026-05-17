@@ -80,7 +80,7 @@ class NewtonFractal extends Fractal {
     this.lastFrameCx = cam.cx; this.lastFrameCy = cam.cy; this.lastFrameZoom = cam.zoom;
     
     if (paramsChanged || (camChanged && !isMoving)) {
-       this.resolution = 8;
+       this.resolution = 4;
        this.renderedCx = cam.cx; this.renderedCy = cam.cy; this.renderedZoom = cam.zoom;
        this.renderedMaxIt = curMaxIt; this.renderedTolerance = curTol; this.renderedRelaxation = curRelax; this.renderedPalette = palette;
        this.renderedC_re = cRe.value; this.renderedC_im = cIm.value;
@@ -88,15 +88,27 @@ class NewtonFractal extends Fractal {
     }
     
     if (this.resolution >= 1 && !isMoving) {
-      this.buffer.noStroke();
+      this.buffer.loadPixels();
+      
+      let lut = new Array(1000);
+      for (let j = 0; j < 1000; j++) {
+        let c = palette.sample(j / 1000.0);
+        lut[j] = [c.levels[0], c.levels[1], c.levels[2]];
+      }
+      
+      let textColR = 43, textColG = 45, textColB = 66; 
+      let w = this.buffer.width;
+      let h = this.buffer.height;
+      let res = this.resolution;
+
       let cr = this.renderedC_re;
       let ci = this.renderedC_im;
       let degree = this.renderedFType + 3; 
       
-      for(let y=0; y<this.buffer.height; y+=this.resolution) {
-        for(let x=0; x<this.buffer.width; x+=this.resolution) {
-          let zx = this.renderedCx + (x + this.resolution/2.0 - this.buffer.width/2) / this.renderedZoom;
-          let zy = this.renderedCy + (y + this.resolution/2.0 - this.buffer.height/2) / this.renderedZoom;
+      for(let y=0; y<h; y+=res) {
+        for(let x=0; x<w; x+=res) {
+          let zx = this.renderedCx + (x + res/2.0 - w/2) / this.renderedZoom;
+          let zy = this.renderedCy + (y + res/2.0 - h/2) / this.renderedZoom;
           
           if (zx === 0 && zy === 0) zx = 0.0001; 
           
@@ -126,7 +138,7 @@ class NewtonFractal extends Fractal {
             let nextX = coef1 * zx + coef2 * term_r;
             let nextY = coef1 * zy + coef2 * term_i;
             
-            if (abs(nextX - zx) < curTol && abs(nextY - zy) < curTol) {
+            if (Math.abs(nextX - zx) < curTol && Math.abs(nextY - zy) < curTol) {
                 converged = true;
                 break;
             }
@@ -136,20 +148,36 @@ class NewtonFractal extends Fractal {
             i++;
           }
           
+          let pr, pg, pb;
           if (!converged) {
-             this.buffer.fill(Theme.TEXT_COLOR); 
+             pr = textColR; pg = textColG; pb = textColB;
           } else {
-             let angle = atan2(zy, zx); 
-             let baseT = (angle + PI) / TWO_PI;
+             let angle = Math.atan2(zy, zx); 
+             let baseT = (angle + Math.PI) / (2 * Math.PI);
              let t = (baseT * curDensity + curShift + i / curMaxIt) % 1.0;
              if (t < 0) t += 1.0;
              
-             let rootColor = palette.sample(t);
-             this.buffer.fill(rootColor);
+             let lutIdx = Math.floor(t * 999);
+             let rgb = lut[lutIdx];
+             pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
           }
-          this.buffer.rect(x, y, this.resolution, this.resolution);
+          
+          for (let dy = 0; dy < res; dy++) {
+            for (let dx = 0; dx < res; dx++) {
+               let px = x + dx;
+               let py = y + dy;
+               if (px < w && py < h) {
+                  let idx = (px + py * w) * 4;
+                  this.buffer.pixels[idx] = pr;
+                  this.buffer.pixels[idx+1] = pg;
+                  this.buffer.pixels[idx+2] = pb;
+                  this.buffer.pixels[idx+3] = 255;
+               }
+            }
+          }
         }
       }
+      this.buffer.updatePixels();
       if(this.resolution > 1) this.resolution /= 2;
       else this.resolution = 0;
     }

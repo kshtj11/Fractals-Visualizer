@@ -16,6 +16,7 @@ The product allows users to pan, zoom, tweak parameters, shift formulas, and dyn
 - **Mathematical Feedback**: Read theoretical fractional dimensions and geometric properties dynamically depending on the current fractal settings.
 - **Stretch-and-Refine Caching (New)**: Smooth 60 FPS affine transformations while panning and zooming, with progressive high-definition pixel refinement kicking in exactly when you stop moving.
 - **High-DPI Antialiasing (New)**: Native integration with Retina and 4K displays (`pixelDensity`) ensuring perfectly crisp typography and smooth fractal line art without native browser pinch-zooming conflicts.
+- **Extreme Performance Boost (New)**: Completely bypasses native p5.js shape rendering (`rect()`) for fractals like Mandelbrot, Julia, and Newton, utilizing direct `loadPixels()` and byte-array memory manipulation coupled with cached Color Lookup Tables (LUTs). This results in near-instant 60 FPS resolution-refinement even on complex fractals.
 
 ---
 

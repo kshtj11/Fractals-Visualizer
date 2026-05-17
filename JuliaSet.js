@@ -76,7 +76,7 @@ class JuliaSet extends Fractal {
     this.lastFrameCx = cam.cx; this.lastFrameCy = cam.cy; this.lastFrameZoom = cam.zoom;
     
     if (paramsChanged || (camChanged && !isMoving)) {
-       this.resolution = 8;
+       this.resolution = 4;
        this.renderedCx = cam.cx; this.renderedCy = cam.cy; this.renderedZoom = cam.zoom;
        this.renderedMaxIt = curMaxIt; this.renderedER = curER; this.renderedPalette = palette;
        this.renderedC_re = cRe.value; this.renderedC_im = cIm.value;
@@ -84,15 +84,27 @@ class JuliaSet extends Fractal {
     }
     
     if (this.resolution >= 1 && !isMoving) {
-      this.buffer.noStroke();
+      this.buffer.loadPixels();
+      
+      let lut = new Array(1000);
+      for (let j = 0; j < 1000; j++) {
+        let c = palette.sample(j / 1000.0);
+        lut[j] = [c.levels[0], c.levels[1], c.levels[2]];
+      }
+      
+      let bgR = 249, bgG = 247, bgB = 241;
+      let w = this.buffer.width;
+      let h = this.buffer.height;
+      let res = this.resolution;
+
       let cr = this.renderedC_re;
       let ci = this.renderedC_im;
       let limitSq = curER * curER;
       
-      for(let y=0; y<this.buffer.height; y+=this.resolution) {
-        for(let x=0; x<this.buffer.width; x+=this.resolution) {
-          let zx = this.renderedCx + (x + this.resolution/2.0 - this.buffer.width/2) / this.renderedZoom;
-          let zy = this.renderedCy + (y + this.resolution/2.0 - this.buffer.height/2) / this.renderedZoom;
+      for(let y=0; y<h; y+=res) {
+        for(let x=0; x<w; x+=res) {
+          let zx = this.renderedCx + (x + res/2.0 - w/2) / this.renderedZoom;
+          let zy = this.renderedCy + (y + res/2.0 - h/2) / this.renderedZoom;
           
           let i=0;
           while(zx*zx + zy*zy < limitSq && i < curMaxIt) {
@@ -105,26 +117,44 @@ class JuliaSet extends Fractal {
                 let zx2 = zx*zx; let zy2 = zy*zy;
                 nextX = zx2*zx2 - 6*zx2*zy2 + zy2*zy2 + cr; nextY = 4*zx*zx2*zy - 4*zx*zy2*zy + ci;
             } else if (this.renderedFType === 3) {
-                let absX = abs(zx); let absY = abs(zy);
+                let absX = Math.abs(zx); let absY = Math.abs(zy);
                 nextX = absX*absX - absY*absY + cr; nextY = 2.0*absX*absY + ci;
             } else if (this.renderedFType === 4) {
-                nextX = sin(zx) * Math.cosh(zy) + cr; nextY = cos(zx) * Math.sinh(zy) + ci;
+                nextX = Math.sin(zx) * Math.cosh(zy) + cr; nextY = Math.cos(zx) * Math.sinh(zy) + ci;
             }
             zx = nextX; zy = nextY; i++;
           }
           
+          let pr, pg, pb;
           if(i >= curMaxIt) {
-            this.buffer.fill(Theme.BG);
+            pr = bgR; pg = bgG; pb = bgB;
           } else {
              let distSq = zx*zx + zy*zy;
-             let smooth = i + 1.0 - (log(log(sqrt(distSq))) / log(2.0));
+             let smooth = i + 1.0 - (Math.log(Math.log(Math.sqrt(distSq))) / Math.LN2);
              let t = (smooth / curMaxIt * curDensity + curShift) % 1.0;
              if (t < 0) t += 1.0;
-             this.buffer.fill(palette.sample(t));
+             
+             let lutIdx = Math.floor(t * 999);
+             let rgb = lut[lutIdx];
+             pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
           }
-          this.buffer.rect(x, y, this.resolution, this.resolution);
+          
+          for (let dy = 0; dy < res; dy++) {
+            for (let dx = 0; dx < res; dx++) {
+               let px = x + dx;
+               let py = y + dy;
+               if (px < w && py < h) {
+                  let idx = (px + py * w) * 4;
+                  this.buffer.pixels[idx] = pr;
+                  this.buffer.pixels[idx+1] = pg;
+                  this.buffer.pixels[idx+2] = pb;
+                  this.buffer.pixels[idx+3] = 255;
+               }
+            }
+          }
         }
       }
+      this.buffer.updatePixels();
       if(this.resolution > 1) this.resolution /= 2;
       else this.resolution = 0;
     }
