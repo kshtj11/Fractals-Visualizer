@@ -103,12 +103,15 @@ function draw() {
      } else {
         animator.evaluatePlayhead();
      }
+     
+     animator.drawRenderProgress();
   }
   
   globalDirty = false;
 }
 
 function windowResized() {
+  if (typeof animator !== 'undefined' && animator.isRendering) return;
   resizeCanvas(windowWidth, windowHeight);
 }
 
@@ -119,6 +122,8 @@ function resetCam() {
 }
 
 function keyPressed() {
+  if (typeof animator !== 'undefined' && animator.isRendering) return;
+  
   if (key === 'r' || key === 'R') {
     resetCam();
     fractals[currentFractalIndex].reset();
@@ -129,6 +134,11 @@ function keyPressed() {
 }
 
 function mousePressed() {
+  if (typeof animator !== 'undefined' && animator.isRendering) {
+    animator.mousePressed();
+    return;
+  }
+  
   if (!hideUI) {
     let b = formulaBar.getBounds();
     let ctaW = 100;

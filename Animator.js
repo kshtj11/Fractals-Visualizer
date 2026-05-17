@@ -10,6 +10,7 @@ class Animator {
     
     this.capturer = null;
     this.isRendering = false;
+    this.renderStartTime = 0;
     
     this.draggingPlayhead = false;
   }
@@ -176,6 +177,21 @@ class Animator {
   }
   
   mousePressed() {
+    if (this.isRendering) {
+       let boxW = 500;
+       let boxH = 200;
+       let bx = width/2 - boxW/2;
+       let by = height/2 - boxH/2;
+       let btnW = 140;
+       let btnH = 35;
+       let btnX = width/2 - btnW/2;
+       let btnY = by + 140;
+       if (mouseX > btnX && mouseX < btnX + btnW && mouseY > btnY && mouseY < btnY + btnH) {
+           this.cancelRender();
+       }
+       return true;
+    }
+    
     if (!this.active) return false;
     let x = hideUI ? 20 : 300;
     let w = hideUI ? width - 40 : width - 320;
@@ -234,9 +250,18 @@ class Animator {
     this.isRendering = true;
     this.isPlaying = false;
     this.playhead = 0;
+    this.renderStartTime = millis();
     this.evaluatePlayhead();
-    this.capturer = new CCapture({ format: 'webm', framerate: 60, display: true });
+    this.capturer = new CCapture({ format: 'webm', framerate: 60, display: false });
     this.capturer.start();
+  }
+  
+  cancelRender() {
+    if (!this.isRendering) return;
+    this.isRendering = false;
+    this.capturer.stop();
+    this.capturer = null;
+    globalDirty = true;
   }
   
   finishRender() {
@@ -244,5 +269,73 @@ class Animator {
     this.capturer.stop();
     this.capturer.save();
     this.capturer = null;
+  }
+  
+  drawRenderProgress() {
+    if (!this.isRendering) return;
+    
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+    
+    let boxW = 500;
+    let boxH = 200;
+    let bx = width/2 - boxW/2;
+    let by = height/2 - boxH/2;
+    
+    fill(Theme.BG);
+    stroke(Theme.BORDER);
+    strokeWeight(1);
+    rect(bx, by, boxW, boxH, 12);
+    
+    fill(Theme.TEXT_COLOR);
+    noStroke();
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text("RENDERING VIDEO...", width/2, by + 40);
+    
+    let barW = 400;
+    let barH = 20;
+    let barX = width/2 - barW/2;
+    let barY = by + 80;
+    
+    fill(Theme.PANEL_BG);
+    stroke(Theme.BORDER);
+    strokeWeight(1);
+    rect(barX, barY, barW, barH, 10);
+    
+    let pct = this.playhead / this.frames;
+    if (pct > 0) {
+      fill(Theme.ACCENT);
+      noStroke();
+      rect(barX, barY, barW * pct, barH, 10);
+    }
+    
+    textSize(14);
+    fill(Theme.TEXT_COLOR);
+    text(`Frame: ${this.playhead} / ${this.frames} (${Math.round(pct * 100)}%)`, width/2, barY + 35);
+    
+    let elapsed = millis() - this.renderStartTime;
+    if (this.playhead > 0) {
+      let timePerFrame = elapsed / this.playhead;
+      let framesLeft = this.frames - this.playhead;
+      let etaMs = timePerFrame * framesLeft;
+      
+      let etaSec = Math.round(etaMs / 1000);
+      let mins = Math.floor(etaSec / 60);
+      let secs = etaSec % 60;
+      text(`Estimated Time Remaining: ${mins}m ${secs}s`, width/2, barY + 60);
+    } else {
+      text("Calculating time remaining...", width/2, barY + 60);
+    }
+    
+    let btnW = 140;
+    let btnH = 35;
+    let btnX = width/2 - btnW/2;
+    let btnY = by + 140;
+    
+    fill('#FF3333');
+    rect(btnX, btnY, btnW, btnH, 8);
+    fill('#FFF');
+    text("Cancel Render", btnX + btnW/2, btnY + btnH/2);
   }
 }
