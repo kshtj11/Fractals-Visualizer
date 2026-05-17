@@ -76,10 +76,12 @@ function draw() {
     formulaBar.draw();
     gradientEditor.draw();
     
-    let ctaW = 120;
+    let b = formulaBar.getBounds();
+    let ctaW = 100;
     let ctaH = 40;
-    let ctaX = width / 2 - ctaW / 2;
-    let ctaY = height - ctaH - (animator.active ? animator.h + 30 : 20);
+    let ctaX = b.ctaX;
+    let ctaY = b.y - ctaH / 2;
+    
     fill(Theme.PANEL_BG);
     stroke(Theme.BORDER);
     strokeWeight(1);
@@ -88,7 +90,7 @@ function draw() {
     noStroke();
     textAlign(CENTER, CENTER);
     textSize(Theme.FONT_SIZE_NORMAL);
-    text("🎬 Animate", ctaX + ctaW / 2, ctaY + ctaH / 2);
+    text("Animate", ctaX + ctaW / 2, ctaY + ctaH / 2);
     
     animator.draw();
   }
@@ -128,20 +130,21 @@ function keyPressed() {
 
 function mousePressed() {
   if (!hideUI) {
-    let ctaW = 120;
+    let b = formulaBar.getBounds();
+    let ctaW = 100;
     let ctaH = 40;
-    let ctaX = width / 2 - ctaW / 2;
-    let ctaY = height - ctaH - (animator.active ? animator.h + 30 : 20);
+    let ctaX = b.ctaX;
+    let ctaY = b.y - ctaH / 2;
     if (mouseX > ctaX && mouseX < ctaX + ctaW && mouseY > ctaY && mouseY < ctaY + ctaH) {
       animator.toggle();
       return;
     }
     
     if (animator.mousePressed()) return;
+    if (formulaBar.mousePressed()) return;
     
     paramPanel.mousePressed();
     switcher.mousePressed();
-    formulaBar.mousePressed();
     gradientEditor.mousePressed();
     zoomDisplay.mousePressed();
   }
