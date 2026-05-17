@@ -14,6 +14,8 @@ The product allows users to pan, zoom, tweak parameters, shift formulas, and dyn
 - **Interactive Tweakable Parameters**: Adjust iterations, escape radii, complex constants ($C$), jump ratios, or bump angles dynamically using sliders and intuitive radial dials. 
 - **Dynamic Gradient Editor**: Interact with color palettes (Sunset Pop, Ocean Breeze, Cotton Candy, Cosmic Pop). Drag and drop color stops directly in the UI to change the rendering mapping instantly.
 - **Mathematical Feedback**: Read theoretical fractional dimensions and geometric properties dynamically depending on the current fractal settings.
+- **Stretch-and-Refine Caching (New)**: Smooth 60 FPS affine transformations while panning and zooming, with progressive high-definition pixel refinement kicking in exactly when you stop moving.
+- **High-DPI Antialiasing (New)**: Native integration with Retina and 4K displays (`pixelDensity`) ensuring perfectly crisp typography and smooth fractal line art without native browser pinch-zooming conflicts.
 
 ---
 

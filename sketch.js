@@ -15,6 +15,8 @@ let mainCanvas;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  pixelDensity(displayDensity());
+  smooth();
   
   fractals.push(new Mandelbrot());
   fractals.push(new JuliaSet());
@@ -138,4 +140,6 @@ function mouseWheel(event) {
   if (mouseX >= cvsX && mouseX <= cvsX + cvsW && mouseY >= cvsY && mouseY <= cvsY + cvsH) {
     cam.zoomAt(mouseX - cvsX, mouseY - cvsY, factor);
   }
+  
+  return false; // Prevents default browser scroll/zoom
 }

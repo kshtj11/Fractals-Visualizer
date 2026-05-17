@@ -12,12 +12,14 @@ class Mandelbrot extends Fractal {
     this.addParameter("color_shift", 0.0, 1.0, 0.0);
     
     this.buffer = null;
-    this.resolution = 8;
-    this.lastZoom = 0; this.lastCx = 0; this.lastCy = 0; 
-    this.lastMaxIt = 0; this.lastER = 0;
-    this.lastShift = 0; this.lastDensity = 0;
-    this.lastFType = -1;
-    this.lastPalette = null;
+    this.resolution = 0;
+    
+    this.renderedCx = 0; this.renderedCy = 0; this.renderedZoom = 0;
+    this.renderedMaxIt = 0; this.renderedER = 0;
+    this.renderedShift = 0; this.renderedDensity = 0;
+    this.renderedFType = -1; this.renderedPalette = null;
+    
+    this.lastFrameCx = 0; this.lastFrameCy = 0; this.lastFrameZoom = 0;
     
     this.reset();
   }
@@ -34,11 +36,11 @@ class Mandelbrot extends Fractal {
   }
   
   render(g, cam, palette) {
-    let dirty = false;
     if (!this.buffer || this.buffer.width !== g.width || this.buffer.height !== g.height) {
       if (this.buffer) this.buffer.remove();
       this.buffer = createGraphics(g.width, g.height);
-      dirty = true;
+      this.buffer.pixelDensity(1); 
+      this.renderedZoom = 0; 
     }
     
     let curMaxIt = this.getParam("max_iterations").value;
@@ -46,58 +48,50 @@ class Mandelbrot extends Fractal {
     let curShift = this.getParam("color_shift").value;
     let curDensity = this.getParam("color_density").value;
     
-    if(globalDirty || cam.zoom !== this.lastZoom || cam.cx !== this.lastCx || cam.cy !== this.lastCy || 
-       curMaxIt !== this.lastMaxIt || curER !== this.lastER || palette !== this.lastPalette ||
-       this.currentFormula !== this.lastFType || curShift !== this.lastShift || curDensity !== this.lastDensity) {
-       dirty = true;
-       this.lastZoom = cam.zoom; this.lastCx = cam.cx; this.lastCy = cam.cy; 
-       this.lastMaxIt = curMaxIt; this.lastER = curER; this.lastPalette = palette;
-       this.lastFType = this.currentFormula; this.lastShift = curShift; this.lastDensity = curDensity;
+    let paramsChanged = (
+       curMaxIt !== this.renderedMaxIt || curER !== this.renderedER || palette !== this.renderedPalette ||
+       this.currentFormula !== this.renderedFType || curShift !== this.renderedShift || curDensity !== this.renderedDensity || globalDirty
+    );
+
+    let camChanged = (cam.cx !== this.renderedCx || cam.cy !== this.renderedCy || cam.zoom !== this.renderedZoom);
+    let isMoving = (cam.cx !== this.lastFrameCx || cam.cy !== this.lastFrameCy || cam.zoom !== this.lastFrameZoom);
+    
+    this.lastFrameCx = cam.cx; this.lastFrameCy = cam.cy; this.lastFrameZoom = cam.zoom;
+    
+    if (paramsChanged || (camChanged && !isMoving)) {
+       this.resolution = 8;
+       this.renderedCx = cam.cx; this.renderedCy = cam.cy; this.renderedZoom = cam.zoom;
+       this.renderedMaxIt = curMaxIt; this.renderedER = curER; this.renderedPalette = palette;
+       this.renderedFType = this.currentFormula; this.renderedShift = curShift; this.renderedDensity = curDensity;
     }
     
-    if(dirty) this.resolution = 8;
-    
-    if (this.resolution >= 1) {
+    if (this.resolution >= 1 && !isMoving) {
       this.buffer.noStroke();
-      
       let limitSq = curER * curER;
       
       for(let y=0; y<this.buffer.height; y+=this.resolution) {
         for(let x=0; x<this.buffer.width; x+=this.resolution) {
-          let cx = cam.screenToWorldX(x + this.resolution/2.0);
-          let cy = cam.screenToWorldY(y + this.resolution/2.0);
+          let cx = this.renderedCx + (x + this.resolution/2.0 - this.buffer.width/2) / this.renderedZoom;
+          let cy = this.renderedCy + (y + this.resolution/2.0 - this.buffer.height/2) / this.renderedZoom;
           
-          let zx = 0;
-          let zy = 0;
-          let i = 0;
-          let distSq = 0; 
+          let zx = 0; let zy = 0; let i = 0; let distSq = 0; 
           
           while((zx*zx + zy*zy) < limitSq && i < curMaxIt) {
             let nextX = 0, nextY = 0;
-            if (this.currentFormula === 0) {
-                nextX = zx*zx - zy*zy + cx;
-                nextY = 2.0*zx*zy + cy;
-            } else if (this.currentFormula === 1) {
-                nextX = zx*zx*zx - 3*zx*zy*zy + cx;
-                nextY = 3*zx*zx*zy - zy*zy*zy + cy;
-            } else if (this.currentFormula === 2) {
-                let zx2 = zx*zx;
-                let zy2 = zy*zy;
-                nextX = zx2*zx2 - 6*zx2*zy2 + zy2*zy2 + cx;
-                nextY = 4*zx*zx2*zy - 4*zx*zy2*zy + cy;
-            } else if (this.currentFormula === 3) {
-                let absX = abs(zx);
-                let absY = abs(zy);
-                nextX = absX*absX - absY*absY + cx;
-                nextY = 2.0*absX*absY + cy;
-            } else if (this.currentFormula === 4) {
-                nextX = sin(zx) * Math.cosh(zy) + cx;
-                nextY = cos(zx) * Math.sinh(zy) + cy;
+            if (this.renderedFType === 0) {
+                nextX = zx*zx - zy*zy + cx; nextY = 2.0*zx*zy + cy;
+            } else if (this.renderedFType === 1) {
+                nextX = zx*zx*zx - 3*zx*zy*zy + cx; nextY = 3*zx*zx*zy - zy*zy*zy + cy;
+            } else if (this.renderedFType === 2) {
+                let zx2 = zx*zx; let zy2 = zy*zy;
+                nextX = zx2*zx2 - 6*zx2*zy2 + zy2*zy2 + cx; nextY = 4*zx*zx2*zy - 4*zx*zy2*zy + cy;
+            } else if (this.renderedFType === 3) {
+                let absX = abs(zx); let absY = abs(zy);
+                nextX = absX*absX - absY*absY + cx; nextY = 2.0*absX*absY + cy;
+            } else if (this.renderedFType === 4) {
+                nextX = sin(zx) * Math.cosh(zy) + cx; nextY = cos(zx) * Math.sinh(zy) + cy;
             }
-            
-            zx = nextX;
-            zy = nextY;
-            i++;
+            zx = nextX; zy = nextY; i++;
           }
           
           if(i >= curMaxIt) {
@@ -112,10 +106,21 @@ class Mandelbrot extends Fractal {
           this.buffer.rect(x, y, this.resolution, this.resolution);
         }
       }
-      
       if(this.resolution > 1) this.resolution /= 2;
+      else this.resolution = 0;
     }
     
+    g.push();
+    if (this.renderedZoom > 0) {
+        let scaleF = cam.zoom / this.renderedZoom;
+        let dx = (this.renderedCx - cam.cx) * cam.zoom;
+        let dy = (this.renderedCy - cam.cy) * cam.zoom;
+        g.translate(g.width/2 + dx, g.height/2 + dy);
+        g.scale(scaleF);
+        g.translate(-g.width/2, -g.height/2);
+    }
+    g.drawingContext.imageSmoothingEnabled = true;
     g.image(this.buffer, 0, 0);
+    g.pop();
   }
 }

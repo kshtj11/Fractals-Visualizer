@@ -15,13 +15,15 @@ class NewtonFractal extends Fractal {
     this.addParameter("color_shift", 0.0, 1.0, 0.0);
     
     this.buffer = null;
-    this.resolution = 8;
-    this.lastZoom = 0; this.lastCx = 0; this.lastCy = 0; 
-    this.lastMaxIt = 0; this.lastTolerance = 0; this.lastRelaxation = 0;
-    this.lastC_re = 0; this.lastC_im = 0;
-    this.lastShift = 0; this.lastDensity = 0;
-    this.lastFType = -1;
-    this.lastPalette = null;
+    this.resolution = 0;
+    
+    this.renderedCx = 0; this.renderedCy = 0; this.renderedZoom = 0;
+    this.renderedMaxIt = 0; this.renderedTolerance = 0; this.renderedRelaxation = 0;
+    this.renderedC_re = 0; this.renderedC_im = 0;
+    this.renderedShift = 0; this.renderedDensity = 0;
+    this.renderedFType = -1; this.renderedPalette = null;
+    
+    this.lastFrameCx = 0; this.lastFrameCy = 0; this.lastFrameZoom = 0;
     
     this.reset();
   }
@@ -41,11 +43,11 @@ class NewtonFractal extends Fractal {
   }
   
   render(g, cam, palette) {
-    let dirty = false;
     if (!this.buffer || this.buffer.width !== g.width || this.buffer.height !== g.height) {
       if (this.buffer) this.buffer.remove();
       this.buffer = createGraphics(g.width, g.height);
-      dirty = true;
+      this.buffer.pixelDensity(1); 
+      this.renderedZoom = 0;
     }
     
     let cRe = this.getParam("c_real");
@@ -66,30 +68,35 @@ class NewtonFractal extends Fractal {
     let curShift = this.getParam("color_shift").value;
     let curDensity = this.getParam("color_density").value;
     
-    if(globalDirty || cam.zoom !== this.lastZoom || cam.cx !== this.lastCx || cam.cy !== this.lastCy || 
-       curMaxIt !== this.lastMaxIt || curTol !== this.lastTolerance || curRelax !== this.lastRelaxation || palette !== this.lastPalette ||
-       cRe.value !== this.lastC_re || cIm.value !== this.lastC_im || 
-       this.currentFormula !== this.lastFType || curShift !== this.lastShift || curDensity !== this.lastDensity) {
-       
-       dirty = true;
-       this.lastZoom = cam.zoom; this.lastCx = cam.cx; this.lastCy = cam.cy; 
-       this.lastMaxIt = curMaxIt; this.lastTolerance = curTol; this.lastRelaxation = curRelax; this.lastPalette = palette;
-       this.lastC_re = cRe.value; this.lastC_im = cIm.value;
-       this.lastFType = this.currentFormula; this.lastShift = curShift; this.lastDensity = curDensity;
+    let paramsChanged = (
+       curMaxIt !== this.renderedMaxIt || curTol !== this.renderedTolerance || curRelax !== this.renderedRelaxation || palette !== this.renderedPalette ||
+       cRe.value !== this.renderedC_re || cIm.value !== this.renderedC_im || 
+       this.currentFormula !== this.renderedFType || curShift !== this.renderedShift || curDensity !== this.renderedDensity || globalDirty
+    );
+
+    let camChanged = (cam.cx !== this.renderedCx || cam.cy !== this.renderedCy || cam.zoom !== this.renderedZoom);
+    let isMoving = (cam.cx !== this.lastFrameCx || cam.cy !== this.lastFrameCy || cam.zoom !== this.lastFrameZoom);
+    
+    this.lastFrameCx = cam.cx; this.lastFrameCy = cam.cy; this.lastFrameZoom = cam.zoom;
+    
+    if (paramsChanged || (camChanged && !isMoving)) {
+       this.resolution = 8;
+       this.renderedCx = cam.cx; this.renderedCy = cam.cy; this.renderedZoom = cam.zoom;
+       this.renderedMaxIt = curMaxIt; this.renderedTolerance = curTol; this.renderedRelaxation = curRelax; this.renderedPalette = palette;
+       this.renderedC_re = cRe.value; this.renderedC_im = cIm.value;
+       this.renderedFType = this.currentFormula; this.renderedShift = curShift; this.renderedDensity = curDensity;
     }
     
-    if (dirty) this.resolution = 8;
-    
-    if (this.resolution >= 1) {
+    if (this.resolution >= 1 && !isMoving) {
       this.buffer.noStroke();
-      let cr = cRe.value;
-      let ci = cIm.value;
-      let degree = this.currentFormula + 3; // z3 to z6 mapping
+      let cr = this.renderedC_re;
+      let ci = this.renderedC_im;
+      let degree = this.renderedFType + 3; 
       
       for(let y=0; y<this.buffer.height; y+=this.resolution) {
         for(let x=0; x<this.buffer.width; x+=this.resolution) {
-          let zx = cam.screenToWorldX(x + this.resolution/2.0);
-          let zy = cam.screenToWorldY(y + this.resolution/2.0);
+          let zx = this.renderedCx + (x + this.resolution/2.0 - this.buffer.width/2) / this.renderedZoom;
+          let zy = this.renderedCy + (y + this.resolution/2.0 - this.buffer.height/2) / this.renderedZoom;
           
           if (zx === 0 && zy === 0) zx = 0.0001; 
           
@@ -144,8 +151,20 @@ class NewtonFractal extends Fractal {
         }
       }
       if(this.resolution > 1) this.resolution /= 2;
+      else this.resolution = 0;
     }
     
+    g.push();
+    if (this.renderedZoom > 0) {
+        let scaleF = cam.zoom / this.renderedZoom;
+        let dx = (this.renderedCx - cam.cx) * cam.zoom;
+        let dy = (this.renderedCy - cam.cy) * cam.zoom;
+        g.translate(g.width/2 + dx, g.height/2 + dy);
+        g.scale(scaleF);
+        g.translate(-g.width/2, -g.height/2);
+    }
+    g.drawingContext.imageSmoothingEnabled = true;
     g.image(this.buffer, 0, 0);
+    g.pop();
   }
 }
