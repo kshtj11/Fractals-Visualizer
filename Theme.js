@@ -1,0 +1,12 @@
+const Theme = {
+  BG: "#F9F7F1",
+  PANEL_BG: "rgba(255, 255, 255, 0.81)",
+  TEXT_COLOR: "#2B2D42",
+  TEXT_DIM: "#8D99AE",
+  ACCENT: "#FF6B6B",
+  BORDER: "rgba(0, 0, 0, 0.13)",
+  
+  FONT_SIZE_LARGE: 22,
+  FONT_SIZE_NORMAL: 16,
+  FONT_SIZE_SMALL: 14
+};
