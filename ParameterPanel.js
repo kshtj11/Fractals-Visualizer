@@ -112,7 +112,7 @@ class ParameterPanel {
           
           stroke(Theme.ACCENT);
           noStroke();
-          ellipse(handleX, sliderY, 12, 12);
+          ellipse(handleX, sy, 12, 12);
           
           py += 55;
       }

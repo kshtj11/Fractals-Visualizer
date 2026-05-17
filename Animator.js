@@ -24,7 +24,7 @@ class Animator {
       cx: cam.targetCx, cy: cam.targetCy, zoom: cam.targetZoom,
       params: {}
     };
-    for (let p of f.params) {
+    for (let p of f.parameters) {
       state.params[p.name] = p.value;
     }
     return state;
@@ -42,7 +42,7 @@ class Animator {
       cam.cx = state.cx; cam.cy = state.cy; cam.zoom = state.zoom;
     }
     let f = fractals[currentFractalIndex];
-    for (let p of f.params) {
+    for (let p of f.parameters) {
       if (state.params[p.name] !== undefined) {
         p.value = state.params[p.name];
       }

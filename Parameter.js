@@ -6,4 +6,9 @@ class Parameter {
     this.value = value;
     this.isInt = isInt;
   }
+  
+  getNormalized(val) {
+    if (this.max === this.min) return 0;
+    return (val - this.min) / (this.max - this.min);
+  }
 }
