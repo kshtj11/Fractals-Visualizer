@@ -113,10 +113,17 @@ class Mandelbrot extends Fractal {
             distSq = zx*zx + zy*zy;
             let smooth = i + 1.0 - (Math.log(Math.log(Math.sqrt(distSq))) / Math.LN2);
             let t = (smooth / curMaxIt * curDensity + curShift) % 1.0;
+            if (Number.isNaN(t) || t === Infinity || t === -Infinity) t = 0;
             if (t < 0) t += 1.0;
             let lutIdx = Math.floor(t * 999);
+            if (lutIdx < 0) lutIdx = 0;
+            if (lutIdx > 999 || Number.isNaN(lutIdx)) lutIdx = 999;
             let rgb = lut[lutIdx];
-            pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
+            if (rgb) {
+              pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
+            } else {
+              pr = bgR; pg = bgG; pb = bgB;
+            }
           }
           
           for (let dy = 0; dy < res; dy++) {

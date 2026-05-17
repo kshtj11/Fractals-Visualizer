@@ -156,11 +156,18 @@ class NewtonFractal extends Fractal {
              let angle = Math.atan2(zy, zx); 
              let baseT = (angle + Math.PI) / (2 * Math.PI);
              let t = (baseT * curDensity + curShift + i / curMaxIt) % 1.0;
+             if (Number.isNaN(t) || t === Infinity || t === -Infinity) t = 0;
              if (t < 0) t += 1.0;
              
              let lutIdx = Math.floor(t * 999);
+             if (lutIdx < 0) lutIdx = 0;
+             if (lutIdx > 999 || Number.isNaN(lutIdx)) lutIdx = 999;
              let rgb = lut[lutIdx];
-             pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
+             if (rgb) {
+               pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
+             } else {
+               pr = textColR; pg = textColG; pb = textColB;
+             }
           }
           
           for (let dy = 0; dy < res; dy++) {
