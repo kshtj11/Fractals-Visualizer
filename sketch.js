@@ -78,19 +78,27 @@ function draw() {
     
     let b = formulaBar.getBounds();
     let ctaW = 100;
-    let ctaH = 40;
+    let ctaH = 48;
     let ctaX = b.ctaX;
-    let ctaY = b.y - ctaH / 2;
+    let ctaY = b.y - 24;
     
-    fill(Theme.PANEL_BG);
-    stroke(Theme.BORDER);
-    strokeWeight(1);
-    rect(ctaX, ctaY, ctaW, ctaH, 20);
-    fill(Theme.TEXT_COLOR);
+    if (animator.active) {
+       fill(Theme.ACCENT);
+    } else {
+       fill(Theme.PANEL_BG);
+    }
     noStroke();
+    rect(ctaX, ctaY, ctaW, ctaH, 24);
+    
+    if (!animator.active && mouseX > ctaX && mouseX < ctaX + ctaW && mouseY > ctaY && mouseY < ctaY + ctaH) {
+        fill("rgba(0, 0, 0, 0.05)"); 
+        rect(ctaX, ctaY, ctaW, ctaH, 24);
+    }
+    
+    fill(animator.active ? Theme.BG : Theme.TEXT_COLOR);
     textAlign(CENTER, CENTER);
     textSize(Theme.FONT_SIZE_NORMAL);
-    text("Animate", ctaX + ctaW / 2, ctaY + ctaH / 2);
+    text("Animate", ctaX + ctaW / 2, b.y - 2);
     
     animator.draw();
   }
@@ -142,9 +150,9 @@ function mousePressed() {
   if (!hideUI) {
     let b = formulaBar.getBounds();
     let ctaW = 100;
-    let ctaH = 40;
+    let ctaH = 48;
     let ctaX = b.ctaX;
-    let ctaY = b.y - ctaH / 2;
+    let ctaY = b.y - 24;
     if (mouseX > ctaX && mouseX < ctaX + ctaW && mouseY > ctaY && mouseY < ctaY + ctaH) {
       animator.toggle();
       return;
