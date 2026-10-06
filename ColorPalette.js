@@ -11,6 +11,28 @@ class ColorPalette {
     this.stops = [];
   }
   
+  addStop(t, c) {
+    if (this.stops.length >= 8) return null; // Limit palette total colors to 8 max
+    let newStop = new ColorStop(constrain(t, 0, 1), c || this.sample(t));
+    this.stops.push(newStop);
+    this.sortStops();
+    return newStop;
+  }
+
+  removeStop(stop) {
+    if (this.stops.length <= 2) return false; // Keep at least 2 stops for gradient
+    let idx = this.stops.indexOf(stop);
+    if (idx !== -1) {
+      this.stops.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
+  sortStops() {
+    this.stops.sort((a, b) => a.t - b.t);
+  }
+
   sample(t) {
     t = constrain(t, 0, 1);
     if (this.stops.length === 0) return color(0);

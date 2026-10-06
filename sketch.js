@@ -160,21 +160,18 @@ function mousePressed() {
     }
 
     if (animator.mousePressed()) return;
+    if (gradientEditor.mousePressed()) return;
     if (formulaBar.mousePressed()) return;
 
     paramPanel.mousePressed();
     switcher.mousePressed();
-    gradientEditor.mousePressed();
     zoomDisplay.mousePressed();
   }
 }
 
 function mouseDragged() {
   if (!hideUI && animator.mouseDragged()) return;
-  if (!hideUI && gradientEditor.draggingStop != null) {
-    gradientEditor.mouseDragged();
-    return;
-  }
+  if (!hideUI && gradientEditor.mouseDragged()) return;
   if (!hideUI && paramPanel.draggingParam != null) {
     paramPanel.mouseDragged();
     return;
