@@ -9,6 +9,7 @@ class Animator {
     this.keyframes = []; 
     this.isPlaying = false;
     this.loopColors = false;
+    this.exportFormat = 'webm'; // 'webm' or 'gif'
     
     this.capturer = null;
     this.isRendering = false;
@@ -164,9 +165,12 @@ class Animator {
     this.drawButton("Loop Colors", trackX + 100, y + 80, 100, 30, loopCol);
     
     let renderCol = this.isRendering ? '#FF0000' : Theme.BG;
-    this.drawButton(this.isRendering ? "Rendering..." : "Render Video", trackX + 220, y + 80, 140, 30, renderCol);
+    this.drawButton(this.isRendering ? "Rendering..." : "Render Video", trackX + 220, y + 80, 120, 30, renderCol);
     
-    let stepX = trackX + 390;
+    let fmtCol = this.exportFormat === 'gif' ? Theme.ACCENT : Theme.BG;
+    this.drawButton("Fmt: " + this.exportFormat.toUpperCase(), trackX + 350, y + 80, 90, 30, fmtCol);
+    
+    let stepX = trackX + 460;
     this.drawStepper("Length:", this.lengthSec + "s", stepX, y + 80);
     this.drawStepper("FPS:", this.fps, stepX + 170, y + 80);
   }
@@ -225,9 +229,13 @@ class Animator {
     if (this.isInside(mouseX, mouseY, x + 20, y + 80, 110, 30)) { this.addKeyframe(); return true; }
     if (this.isInside(mouseX, mouseY, trackX, y + 80, 80, 30)) { this.isPlaying = !this.isPlaying; return true; }
     if (this.isInside(mouseX, mouseY, trackX + 100, y + 80, 100, 30)) { this.loopColors = !this.loopColors; return true; }
-    if (this.isInside(mouseX, mouseY, trackX + 220, y + 80, 140, 30)) { this.startRender(); return true; }
+    if (this.isInside(mouseX, mouseY, trackX + 220, y + 80, 120, 30)) { this.startRender(); return true; }
+    if (this.isInside(mouseX, mouseY, trackX + 350, y + 80, 90, 30)) {
+      this.exportFormat = this.exportFormat === 'webm' ? 'gif' : 'webm';
+      return true;
+    }
     
-    let stepX = trackX + 390;
+    let stepX = trackX + 460;
     if (this.isInside(mouseX, mouseY, stepX, y + 80, 30, 30)) {
        this.lengthSec = Math.max(1, this.lengthSec - 1);
        this.updateFrames(); return true;
@@ -311,7 +319,17 @@ class Animator {
     this.playhead = 0;
     this.renderStartTime = millis();
     this.evaluatePlayhead();
-    this.capturer = new CCapture({ format: 'webm', framerate: this.fps, display: false });
+    
+    let options = { framerate: this.fps, display: false };
+    if (this.exportFormat === 'gif') {
+      options.format = 'gif';
+      options.workersPath = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/';
+      options.quality = 10;
+    } else {
+      options.format = 'webm';
+    }
+    
+    this.capturer = new CCapture(options);
     this.capturer.start();
   }
   

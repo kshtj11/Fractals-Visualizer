@@ -91,57 +91,68 @@ class NewtonFractal extends Fractal {
     if (this.resolution >= 1 && !isMoving) {
       this.buffer.loadPixels();
       
-      let lut = new Array(1000);
+      let lut32 = new Uint32Array(1000);
       for (let j = 0; j < 1000; j++) {
         let c = palette.sample(j / 1000.0);
-        lut[j] = [c.levels[0], c.levels[1], c.levels[2]];
+        let r = c.levels[0], g = c.levels[1], b = c.levels[2];
+        lut32[j] = 0xFF000000 | (b << 16) | (g << 8) | r;
       }
       
-      let textColR = 43, textColG = 45, textColB = 66; 
+      let bgCol = 0xFF422D2B; // 43, 45, 66, 255 (dark slate text color fallback)
       let w = this.buffer.width;
       let h = this.buffer.height;
       let res = this.resolution;
+      let pixels32 = new Uint32Array(this.buffer.pixels.buffer);
 
       let cr = this.renderedC_re;
       let ci = this.renderedC_im;
-      let degree = this.renderedFType + 3; 
+      let degree = this.renderedFType + 3;
+      let coef1 = 1.0 - (curRelax / degree);
+      let coef2 = curRelax / degree;
+      let invZoom = 1.0 / this.renderedZoom;
+      let halfW = w / 2.0;
+      let halfH = h / 2.0;
+      let startZx = this.renderedCx + (res * 0.5 - halfW) * invZoom;
+      let stepZ = res * invZoom;
+      let TWO_PI = Math.PI * 2.0;
       
-      for(let y=0; y<h; y+=res) {
-        for(let x=0; x<w; x+=res) {
-          let zx = this.renderedCx + (x + res/2.0 - w/2) / this.renderedZoom;
-          let zy = this.renderedCy + (y + res/2.0 - h/2) / this.renderedZoom;
+      for (let y = 0; y < h; y += res) {
+        let startZy = this.renderedCy + (y + res * 0.5 - halfH) * invZoom;
+        let startX = startZx;
+        
+        for (let x = 0; x < w; x += res, startX += stepZ) {
+          let zx = startX, zy = startZy;
+          if (zx === 0 && zy === 0) zx = 0.0001;
           
-          if (zx === 0 && zy === 0) zx = 0.0001; 
-          
-          let i=0;
+          let i = 0;
           let converged = false;
           
-          while(i < curMaxIt) {
+          while (i < curMaxIt) {
             let tr = 1.0, ti = 0.0;
-            for(let k=0; k<degree-1; k++) {
-                let ntr = tr*zx - ti*zy;
-                let nti = tr*zy + ti*zx;
-                tr = ntr; ti = nti;
+            for (let k = 0; k < degree - 1; k++) {
+              let ntr = tr * zx - ti * zy;
+              let nti = tr * zy + ti * zx;
+              tr = ntr; ti = nti;
             }
             
-            let modSq = tr*tr + ti*ti;
-            if (modSq < 0.00000001) break; 
+            let modSq = tr * tr + ti * ti;
+            if (modSq < 0.00000001) break;
             
-            let inv_tr = tr / modSq;
-            let inv_ti = -ti / modSq;
+            let invMod = 1.0 / modSq;
+            let inv_tr = tr * invMod;
+            let inv_ti = -ti * invMod;
             
             let term_r = cr * inv_tr - ci * inv_ti;
             let term_i = cr * inv_ti + ci * inv_tr;
             
-            let coef1 = 1.0 - (curRelax / degree);
-            let coef2 = curRelax / degree;
-            
             let nextX = coef1 * zx + coef2 * term_r;
             let nextY = coef1 * zy + coef2 * term_i;
             
-            if (Math.abs(nextX - zx) < curTol && Math.abs(nextY - zy) < curTol) {
-                converged = true;
-                break;
+            let dx = nextX - zx;
+            let dy = nextY - zy;
+            if (dx * dx + dy * dy < curTol * curTol) {
+              converged = true;
+              break;
             }
             
             zx = nextX;
@@ -149,44 +160,37 @@ class NewtonFractal extends Fractal {
             i++;
           }
           
-          let pr, pg, pb;
-          if (!converged) {
-             pr = textColR; pg = textColG; pb = textColB;
-          } else {
-             let angle = Math.atan2(zy, zx); 
-             let baseT = (angle + Math.PI) / (2 * Math.PI);
+          let color32 = bgCol;
+          if (converged) {
+             let angle = Math.atan2(zy, zx);
+             let baseT = (angle + Math.PI) / TWO_PI;
              let t = (baseT * curDensity + curShift + i / curMaxIt) % 1.0;
-             if (Number.isNaN(t) || t === Infinity || t === -Infinity) t = 0;
              if (t < 0) t += 1.0;
              
-             let lutIdx = Math.floor(t * 999);
+             let lutIdx = (t * 999) | 0;
              if (lutIdx < 0) lutIdx = 0;
-             if (lutIdx > 999 || Number.isNaN(lutIdx)) lutIdx = 999;
-             let rgb = lut[lutIdx];
-             if (rgb) {
-               pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
-             } else {
-               pr = textColR; pg = textColG; pb = textColB;
-             }
+             else if (lutIdx > 999) lutIdx = 999;
+             color32 = lut32[lutIdx];
           }
           
-          for (let dy = 0; dy < res; dy++) {
-            for (let dx = 0; dx < res; dx++) {
-               let px = x + dx;
-               let py = y + dy;
-               if (px < w && py < h) {
-                  let idx = (px + py * w) * 4;
-                  this.buffer.pixels[idx] = pr;
-                  this.buffer.pixels[idx+1] = pg;
-                  this.buffer.pixels[idx+2] = pb;
-                  this.buffer.pixels[idx+3] = 255;
-               }
+          if (res === 1) {
+            pixels32[y * w + x] = color32;
+          } else {
+            for (let dy = 0; dy < res; dy++) {
+              let rowOffset = (y + dy) * w;
+              if (y + dy < h) {
+                for (let dx = 0; dx < res; dx++) {
+                  if (x + dx < w) {
+                    pixels32[rowOffset + x + dx] = color32;
+                  }
+                }
+              }
             }
           }
         }
       }
       this.buffer.updatePixels();
-      if(this.resolution > 1) this.resolution /= 2;
+      if (this.resolution > 1) this.resolution /= 2;
       else this.resolution = 0;
     }
     

@@ -70,80 +70,120 @@ class Mandelbrot extends Fractal {
       this.buffer.loadPixels();
       let limitSq = curER * curER;
       
-      let lut = new Array(1000);
+      let lut32 = new Uint32Array(1000);
       for (let i = 0; i < 1000; i++) {
         let c = palette.sample(i / 1000.0);
-        lut[i] = [c.levels[0], c.levels[1], c.levels[2]];
+        let r = c.levels[0], g = c.levels[1], b = c.levels[2];
+        lut32[i] = 0xFF000000 | (b << 16) | (g << 8) | r;
       }
       
-      let bgR = 249, bgG = 247, bgB = 241;
+      let bgCol = 0xFFF1F7F9; // 249, 247, 241, 255
       let w = this.buffer.width;
       let h = this.buffer.height;
       let res = this.resolution;
+      let pixels32 = new Uint32Array(this.buffer.pixels.buffer);
       
-      for(let y=0; y<h; y+=res) {
-        for(let x=0; x<w; x+=res) {
-          let cx = this.renderedCx + (x + res/2.0 - w/2) / this.renderedZoom;
-          let cy = this.renderedCy + (y + res/2.0 - h/2) / this.renderedZoom;
+      let invZoom = 1.0 / this.renderedZoom;
+      let halfW = w / 2.0;
+      let halfH = h / 2.0;
+      let startCx = this.renderedCx + (res * 0.5 - halfW) * invZoom;
+      let stepC = res * invZoom;
+      let LN2 = Math.LN2;
+      let fType = this.renderedFType;
+      
+      for (let y = 0; y < h; y += res) {
+        let cy = this.renderedCy + (y + res * 0.5 - halfH) * invZoom;
+        let cx = startCx;
+        
+        for (let x = 0; x < w; x += res, cx += stepC) {
+          let zx = 0, zy = 0, i = 0;
+          let color32 = bgCol;
           
-          let zx = 0; let zy = 0; let i = 0; let distSq = 0; 
-          
-          while((zx*zx + zy*zy) < limitSq && i < curMaxIt) {
-            let nextX = 0, nextY = 0;
-            if (this.renderedFType === 0) {
-                nextX = zx*zx - zy*zy + cx; nextY = 2.0*zx*zy + cy;
-            } else if (this.renderedFType === 1) {
-                nextX = zx*zx*zx - 3*zx*zy*zy + cx; nextY = 3*zx*zx*zy - zy*zy*zy + cy;
-            } else if (this.renderedFType === 2) {
-                let zx2 = zx*zx; let zy2 = zy*zy;
-                nextX = zx2*zx2 - 6*zx2*zy2 + zy2*zy2 + cx; nextY = 4*zx*zx2*zy - 4*zx*zy2*zy + cy;
-            } else if (this.renderedFType === 3) {
-                let absX = Math.abs(zx); let absY = Math.abs(zy);
-                nextX = absX*absX - absY*absY + cx; nextY = 2.0*absX*absY + cy;
-            } else if (this.renderedFType === 4) {
-                nextX = Math.sin(zx) * Math.cosh(zy) + cx; nextY = Math.cos(zx) * Math.sinh(zy) + cy;
+          // Fast Cardioid / Period-2 Bulb test for z^2 + c
+          if (fType === 0) {
+            let cxShift = cx - 0.25;
+            let cy2 = cy * cy;
+            let q = cxShift * cxShift + cy2;
+            if (q * (q + cxShift) < 0.25 * cy2 || (cx + 1.0) * (cx + 1.0) + cy2 < 0.0625) {
+              i = curMaxIt;
             }
-            zx = nextX; zy = nextY; i++;
           }
           
-          let pr, pg, pb;
-          if(i >= curMaxIt) {
-            pr = bgR; pg = bgG; pb = bgB;
-          } else {
-            distSq = zx*zx + zy*zy;
-            let smooth = i + 1.0 - (Math.log(Math.log(Math.sqrt(distSq))) / Math.LN2);
-            let t = (smooth / curMaxIt * curDensity + curShift) % 1.0;
-            if (Number.isNaN(t) || t === Infinity || t === -Infinity) t = 0;
-            if (t < 0) t += 1.0;
-            let lutIdx = Math.floor(t * 999);
-            if (lutIdx < 0) lutIdx = 0;
-            if (lutIdx > 999 || Number.isNaN(lutIdx)) lutIdx = 999;
-            let rgb = lut[lutIdx];
-            if (rgb) {
-              pr = rgb[0]; pg = rgb[1]; pb = rgb[2];
+          if (i < curMaxIt) {
+            if (fType === 0) {
+              while (i < curMaxIt) {
+                let zx2 = zx * zx, zy2 = zy * zy;
+                if (zx2 + zy2 >= limitSq) break;
+                zy = 2.0 * zx * zy + cy;
+                zx = zx2 - zy2 + cx;
+                i++;
+              }
+            } else if (fType === 1) {
+              while (i < curMaxIt) {
+                let zx2 = zx * zx, zy2 = zy * zy;
+                if (zx2 + zy2 >= limitSq) break;
+                let nextX = zx * zx2 - 3.0 * zx * zy2 + cx;
+                let nextY = 3.0 * zx2 * zy - zy * zy2 + cy;
+                zx = nextX; zy = nextY; i++;
+              }
+            } else if (fType === 2) {
+              while (i < curMaxIt) {
+                let zx2 = zx * zx, zy2 = zy * zy;
+                if (zx2 + zy2 >= limitSq) break;
+                let nextX = zx2 * zx2 - 6.0 * zx2 * zy2 + zy2 * zy2 + cx;
+                let nextY = 4.0 * zx * zx2 * zy - 4.0 * zx * zy2 * zy + cy;
+                zx = nextX; zy = nextY; i++;
+              }
+            } else if (fType === 3) {
+              while (i < curMaxIt) {
+                let absX = Math.abs(zx), absY = Math.abs(zy);
+                let zx2 = absX * absX, zy2 = absY * absY;
+                if (zx2 + zy2 >= limitSq) break;
+                zx = zx2 - zy2 + cx;
+                zy = 2.0 * absX * absY + cy;
+                i++;
+              }
             } else {
-              pr = bgR; pg = bgG; pb = bgB;
+              while (i < curMaxIt) {
+                let zx2 = zx * zx, zy2 = zy * zy;
+                if (zx2 + zy2 >= limitSq) break;
+                let nextX = Math.sin(zx) * Math.cosh(zy) + cx;
+                let nextY = Math.cos(zx) * Math.sinh(zy) + cy;
+                zx = nextX; zy = nextY; i++;
+              }
             }
           }
           
-          for (let dy = 0; dy < res; dy++) {
-            for (let dx = 0; dx < res; dx++) {
-               let px = x + dx;
-               let py = y + dy;
-               if (px < w && py < h) {
-                  let idx = (px + py * w) * 4;
-                  this.buffer.pixels[idx] = pr;
-                  this.buffer.pixels[idx+1] = pg;
-                  this.buffer.pixels[idx+2] = pb;
-                  this.buffer.pixels[idx+3] = 255;
-               }
+          if (i < curMaxIt) {
+            let distSq = zx * zx + zy * zy;
+            let smooth = i + 1.0 - (Math.log(0.5 * Math.log(distSq)) / LN2);
+            let t = (smooth / curMaxIt * curDensity + curShift) % 1.0;
+            if (t < 0) t += 1.0;
+            let lutIdx = (t * 999) | 0;
+            if (lutIdx < 0) lutIdx = 0;
+            else if (lutIdx > 999) lutIdx = 999;
+            color32 = lut32[lutIdx];
+          }
+          
+          if (res === 1) {
+            pixels32[y * w + x] = color32;
+          } else {
+            for (let dy = 0; dy < res; dy++) {
+              let rowOffset = (y + dy) * w;
+              if (y + dy < h) {
+                for (let dx = 0; dx < res; dx++) {
+                  if (x + dx < w) {
+                    pixels32[rowOffset + x + dx] = color32;
+                  }
+                }
+              }
             }
           }
         }
       }
       this.buffer.updatePixels();
       
-      if(this.resolution > 1) this.resolution /= 2;
+      if (this.resolution > 1) this.resolution /= 2;
       else this.resolution = 0;
     }
     

@@ -57,24 +57,51 @@ class SierpinskiTriangle extends Fractal {
     let sides = this.currentFormula + 3;
     let vx = new Array(sides);
     let vy = new Array(sides);
+    let TWO_PI_VAL = Math.PI * 2.0;
     for (let v = 0; v < sides; v++) {
-        let a = -PI/2 + v * TWO_PI / sides;
-        vx[v] = cos(a);
-        vy[v] = sin(a);
+        let a = -Math.PI / 2 + v * TWO_PI_VAL / sides;
+        vx[v] = Math.cos(a);
+        vy[v] = Math.sin(a);
     }
     
-    for (let i=0; i<pts; i++) {
-        let r = Math.floor(random(sides));
-        this.px = lerp(this.px, vx[r], curJ);
-        this.py = lerp(this.py, vy[r], curJ);
-        
-        let sx = cam.worldToScreenX(this.px);
-        let sy = cam.worldToScreenY(this.py);
-        
-        let angle = atan2(this.py, this.px) + PI;
-        this.buffer.stroke(palette.sample(angle / TWO_PI));
-        this.buffer.point(sx, sy);
+    this.buffer.loadPixels();
+    let pixels32 = new Uint32Array(this.buffer.pixels.buffer);
+    let w = this.buffer.width;
+    let h = this.buffer.height;
+    
+    let lut32 = new Uint32Array(1000);
+    for (let j = 0; j < 1000; j++) {
+      let c = palette.sample(j / 1000.0);
+      let r = c.levels[0], g = c.levels[1], b = c.levels[2];
+      lut32[j] = 0xFF000000 | (b << 16) | (g << 8) | r;
     }
+    
+    let halfW = w * 0.5;
+    let halfH = h * 0.5;
+    let zoom = cam.zoom;
+    let cx = cam.cx;
+    let cy = cam.cy;
+    
+    for (let i = 0; i < pts; i++) {
+        let r = (Math.random() * sides) | 0;
+        this.px = this.px + (vx[r] - this.px) * curJ;
+        this.py = this.py + (vy[r] - this.py) * curJ;
+        
+        let ix = ((this.px - cx) * zoom + halfW) | 0;
+        let iy = ((this.py - cy) * zoom + halfH) | 0;
+        
+        if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
+          let angle = Math.atan2(this.py, this.px) + Math.PI;
+          let t = (angle / TWO_PI_VAL) % 1.0;
+          if (t < 0) t += 1.0;
+          let lutIdx = (t * 999) | 0;
+          if (lutIdx < 0) lutIdx = 0;
+          else if (lutIdx > 999) lutIdx = 999;
+          
+          pixels32[iy * w + ix] = lut32[lutIdx];
+        }
+    }
+    this.buffer.updatePixels();
     
     g.image(this.buffer, 0, 0);
   }

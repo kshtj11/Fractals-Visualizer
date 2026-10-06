@@ -26,6 +26,7 @@ function setup() {
   fractals.push(new BarnsleyFern());
   fractals.push(new KochSnowflake());
   fractals.push(new SierpinskiTriangle());
+  fractals.push(new CantorSet());
 
   cam = new Camera(width, height);
 

@@ -59,9 +59,26 @@ class BarnsleyFern extends Fractal {
     this.buffer.strokeWeight(1.0); 
     
     let pts = curP;
+    this.buffer.loadPixels();
+    let pixels32 = new Uint32Array(this.buffer.pixels.buffer);
+    let w = this.buffer.width;
+    let h = this.buffer.height;
+    
+    let lut32 = new Uint32Array(1000);
+    for (let j = 0; j < 1000; j++) {
+      let c = palette.sample(j / 1000.0);
+      let r = c.levels[0], g = c.levels[1], b = c.levels[2];
+      lut32[j] = 0xFF000000 | (b << 16) | (g << 8) | r;
+    }
+    
+    let halfW = w * 0.5;
+    let halfH = h * 0.5;
+    let zoom = cam.zoom;
+    let cx = cam.cx;
+    let cy = cam.cy;
     
     for (let i = 0; i < pts; i++) {
-        let r = random(1);
+        let r = Math.random();
         let nextX=0, nextY=0;
         
         if (this.currentFormula === 0) {
@@ -118,14 +135,20 @@ class BarnsleyFern extends Fractal {
         this.px = nextX;
         this.py = nextY;
         
-        let sx = cam.worldToScreenX(this.px);
-        let sy = cam.worldToScreenY(-this.py); 
-        let t = (this.py / 10.0 * curDensity + curShift) % 1.0;
-        if (t < 0) t += 1.0;
+        let ix = ((this.px - cx) * zoom + halfW) | 0;
+        let iy = ((-this.py - cy) * zoom + halfH) | 0;
         
-        this.buffer.stroke(palette.sample(t));
-        this.buffer.point(sx, sy);
+        if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
+          let t = (this.py / 10.0 * curDensity + curShift) % 1.0;
+          if (t < 0) t += 1.0;
+          let lutIdx = (t * 999) | 0;
+          if (lutIdx < 0) lutIdx = 0;
+          else if (lutIdx > 999) lutIdx = 999;
+          
+          pixels32[iy * w + ix] = lut32[lutIdx];
+        }
     }
+    this.buffer.updatePixels();
     
     g.image(this.buffer, 0, 0);
   }
