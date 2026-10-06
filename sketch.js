@@ -105,14 +105,7 @@ function draw() {
   }
 
   if (typeof animator !== 'undefined' && animator.isRendering) {
-    animator.capturer.capture(mainCanvas.elt);
-    animator.playhead++;
-    if (animator.playhead > animator.frames) {
-      animator.finishRender();
-    } else {
-      animator.evaluatePlayhead();
-    }
-
+    animator.renderFrame();
     animator.drawRenderProgress();
   }
 
