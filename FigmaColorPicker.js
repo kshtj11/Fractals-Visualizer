@@ -7,9 +7,12 @@ class FigmaColorPicker {
     this.v = 1.0; // 0 - 1
     
     this.w = 260;
-    this.hHeight = 310;
+    this.hHeight = 315;
     this.x = 0;
     this.y = 0;
+    
+    this.targetPx = 0;
+    this.targetPy = 0;
     
     this.draggingSV = false;
     this.draggingHue = false;
@@ -23,6 +26,8 @@ class FigmaColorPicker {
   
   open(stop, px, py) {
     this.targetStop = stop;
+    this.targetPx = px;
+    this.targetPy = py;
     this.active = true;
     
     let c = stop.c;
@@ -32,8 +37,12 @@ class FigmaColorPicker {
     this.s = hsv.s;
     this.v = hsv.v;
     
-    this.x = constrain(px - this.w / 2, 20, width - this.w - 20);
-    this.y = constrain(py - this.hHeight - 10, 60, height - this.hHeight - 20);
+    // Spawn strictly to the LEFT of the right sidebar panel (width - 280 - 20)
+    let sidebarX = width - 280 - 20;
+    let idealX = sidebarX - this.w - 16; // 16px gap to the left of sidebar
+    
+    this.x = constrain(idealX, 20, width - this.w - 20);
+    this.y = constrain(py - 80, 60, height - this.hHeight - 20);
   }
   
   close() {
@@ -54,29 +63,46 @@ class FigmaColorPicker {
     if (!this.active || !this.targetStop) return;
     
     push();
-    // Modal window container
-    fill(Theme.PANEL_BG);
+    
+    // Connector pointer arrow pointing toward the target stop node on the right
+    let arrowY = constrain(this.targetPy, this.y + 20, this.y + this.hHeight - 20);
+    fill("rgba(255, 255, 255, 0.95)");
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(this.x, this.y, this.w, this.hHeight, 12);
+    triangle(
+      this.x + this.w, arrowY - 7,
+      this.x + this.w + 10, arrowY,
+      this.x + this.w, arrowY + 7
+    );
+    
+    // Main Modal Container
+    fill("rgba(255, 255, 255, 0.95)");
+    stroke(Theme.BORDER);
+    strokeWeight(1);
+    rect(this.x, this.y, this.w, this.hHeight, 14);
     
     // Header
+    let pal = paletteManager.current();
+    let stopIdx = pal ? pal.stops.indexOf(this.targetStop) + 1 : 1;
+    let totalStops = pal ? pal.stops.length : 1;
+    
     fill(Theme.TEXT_COLOR);
     noStroke();
     textAlign(LEFT, CENTER);
     textSize(Theme.FONT_SIZE_NORMAL);
-    text("Color Picker", this.x + 15, this.y + 20);
+    text(`Color Picker (Stop ${stopIdx}/${totalStops})`, this.x + 15, this.y + 22);
     
     // Close button X
-    let closeX = this.x + this.w - 25;
-    let closeY = this.y + 20;
+    let closeX = this.x + this.w - 22;
+    let closeY = this.y + 22;
     fill(Theme.TEXT_DIM);
     textAlign(CENTER, CENTER);
+    textSize(14);
     text("✕", closeX, closeY);
     
     // 2D Saturation/Value Box
     let svX = this.x + 15;
-    let svY = this.y + 42;
+    let svY = this.y + 45;
     let svW = this.w - 30;
     let svH = 130;
     
@@ -95,21 +121,25 @@ class FigmaColorPicker {
     noFill();
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(svX, svY, svW, svH);
+    rect(svX, svY, svW, svH, 4);
     
-    // Handle for SV
+    // Handle for SV Picker
     let handleX = svX + this.s * svW;
     let handleY = svY + (1.0 - this.v) * svH;
     fill(this.targetStop.c);
     stroke(255);
     strokeWeight(2.5);
     ellipse(handleX, handleY, 14, 14);
+    stroke(0, 100);
+    strokeWeight(1);
+    noFill();
+    ellipse(handleX, handleY, 16, 16);
     
     // Rainbow Hue Bar
     let hueX = this.x + 15;
-    let hueY = svY + svH + 12;
+    let hueY = svY + svH + 14;
     let hueW = this.w - 30;
-    let hueH = 14;
+    let hueH = 16;
     
     for (let i = 0; i < hueW; i++) {
       let hueVal = (i / hueW) * 360;
@@ -121,9 +151,9 @@ class FigmaColorPicker {
     noFill();
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(hueX, hueY, hueW, hueH);
+    rect(hueX, hueY, hueW, hueH, 4);
     
-    // Handle for Hue
+    // Handle for Hue Slider
     let hHandleX = hueX + (this.h / 360.0) * hueW;
     fill(255);
     stroke(Theme.TEXT_COLOR);
@@ -138,17 +168,20 @@ class FigmaColorPicker {
     fill(curRGB.r, curRGB.g, curRGB.b);
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(this.x + 15, infoY, 26, 26, 6);
+    rect(this.x + 15, infoY, 28, 28, 6);
     
     fill(Theme.TEXT_COLOR);
     noStroke();
     textAlign(LEFT, CENTER);
     textSize(Theme.FONT_SIZE_SMALL);
-    text(hexStr, this.x + 50, infoY + 13);
-    text(`R:${curRGB.r} G:${curRGB.g} B:${curRGB.b}`, this.x + 125, infoY + 13);
+    text(hexStr, this.x + 52, infoY + 14);
+    
+    fill(Theme.TEXT_DIM);
+    textSize(11);
+    text(`R:${curRGB.r} G:${curRGB.g} B:${curRGB.b}`, this.x + 130, infoY + 14);
     
     // Swatches Grid
-    let swatchY = infoY + 34;
+    let swatchY = infoY + 36;
     let swatchSize = 14;
     let swatchGap = 4;
     for (let i = 0; i < this.swatches.length; i++) {
@@ -167,16 +200,16 @@ class FigmaColorPicker {
     if (!this.active) return false;
     
     // Close button click
-    let closeX = this.x + this.w - 25;
-    let closeY = this.y + 20;
-    if (dist(mouseX, mouseY, closeX, closeY) < 15) {
+    let closeX = this.x + this.w - 22;
+    let closeY = this.y + 22;
+    if (dist(mouseX, mouseY, closeX, closeY) < 16) {
       this.close();
       return true;
     }
     
     // SV Box click
     let svX = this.x + 15;
-    let svY = this.y + 42;
+    let svY = this.y + 45;
     let svW = this.w - 30;
     let svH = 130;
     if (mouseX >= svX && mouseX <= svX + svW && mouseY >= svY && mouseY <= svY + svH) {
@@ -189,9 +222,9 @@ class FigmaColorPicker {
     
     // Hue Bar click
     let hueX = this.x + 15;
-    let hueY = svY + svH + 12;
+    let hueY = svY + svH + 14;
     let hueW = this.w - 30;
-    let hueH = 14;
+    let hueH = 16;
     if (mouseX >= hueX && mouseX <= hueX + hueW && mouseY >= hueY && mouseY <= hueY + hueH) {
       this.draggingHue = true;
       this.h = constrain((mouseX - hueX) / hueW, 0, 1) * 360.0;
@@ -201,7 +234,7 @@ class FigmaColorPicker {
     
     // Swatch click
     let infoY = hueY + hueH + 14;
-    let swatchY = infoY + 34;
+    let swatchY = infoY + 36;
     let swatchSize = 14;
     let swatchGap = 4;
     for (let i = 0; i < this.swatches.length; i++) {
@@ -233,7 +266,7 @@ class FigmaColorPicker {
     
     if (this.draggingSV) {
       let svX = this.x + 15;
-      let svY = this.y + 42;
+      let svY = this.y + 45;
       let svW = this.w - 30;
       let svH = 130;
       this.s = constrain((mouseX - svX) / svW, 0, 1);
@@ -243,10 +276,10 @@ class FigmaColorPicker {
     }
     
     if (this.draggingHue) {
-      let svY = this.y + 42;
+      let svY = this.y + 45;
       let svH = 130;
       let hueX = this.x + 15;
-      let hueY = svY + svH + 12;
+      let hueY = svY + svH + 14;
       let hueW = this.w - 30;
       this.h = constrain((mouseX - hueX) / hueW, 0, 1) * 360.0;
       this.updateTargetColor();
