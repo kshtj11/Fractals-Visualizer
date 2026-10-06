@@ -1,7 +1,7 @@
 class Animator {
   constructor() {
     this.active = false;
-    this.h = 130;
+    this.h = 120;
     this.lengthSec = 4;
     this.fps = 30;
     this.frames = this.lengthSec * this.fps;
@@ -140,11 +140,11 @@ class Animator {
     
     // Timeline Track Header
     let trackX = x + 150;
-    let trackY = y + 26;
+    let trackY = y + 24;
     let trackW = w - 170;
     
     stroke(Theme.BORDER);
-    strokeWeight(8);
+    strokeWeight(6);
     strokeCap(ROUND);
     line(trackX, trackY, trackX + trackW, trackY);
     
@@ -153,13 +153,11 @@ class Animator {
     for (let k of this.keyframes) {
       let kx = trackX + (k.f / this.frames) * trackW;
       fill(Theme.ACCENT);
-      if (k.f === this.keyframes[0]?.f) fill('#2EC4B6');
-      else if (k.f === this.keyframes[this.keyframes.length-1]?.f) fill('#E76F51');
       push();
       translate(kx, trackY);
       rotate(PI/4);
       rectMode(CENTER);
-      rect(0, 0, 10, 10);
+      rect(0, 0, 9, 9);
       pop();
     }
     
@@ -167,10 +165,10 @@ class Animator {
     let px = trackX + (this.playhead / this.frames) * trackW;
     stroke(Theme.TEXT_COLOR);
     strokeWeight(2);
-    line(px, trackY - 12, px, trackY + 12);
+    line(px, trackY - 10, px, trackY + 10);
     fill(Theme.TEXT_COLOR);
     noStroke();
-    triangle(px - 5, trackY - 12, px + 5, trackY - 12, px, trackY - 4);
+    triangle(px - 4, trackY - 10, px + 4, trackY - 10, px, trackY - 3);
     
     // Playhead Label
     fill(Theme.TEXT_COLOR);
@@ -178,26 +176,25 @@ class Animator {
     textSize(Theme.FONT_SIZE_SMALL);
     text("Frame: " + Math.round(this.playhead) + " / " + this.frames, x + 15, trackY);
     
-    // Controls Row (Well-spaced layout to prevent any overlapping!)
-    let btnY = y + 74;
+    // Controls Row (Aligned to Theme UI style)
+    let btnY = y + 62;
     
     // Group 1: Playback Actions
-    this.drawButton("+ Keyframe", x + 15, btnY, 95, 30);
-    this.drawButton(this.isPlaying ? "⏸ Stop" : "▶ Play", x + 118, btnY, 70, 30);
+    this.drawButton("+ Keyframe", x + 15, btnY, 90, 32);
+    this.drawButton(this.isPlaying ? "⏸ Stop" : "▶ Play", x + 112, btnY, 65, 32);
     
-    let loopCol = this.loopColors ? Theme.ACCENT : Theme.BG;
-    this.drawButton("🎨 Loop", x + 196, btnY, 75, 30, loopCol);
+    let loopActive = this.loopColors;
+    this.drawButton("🎨 Loop", x + 184, btnY, 75, 32, loopActive ? Theme.ACCENT : null);
     
     // Group 2: Steppers
-    this.drawStepper("Len:", this.lengthSec + "s", x + 335, btnY);
-    this.drawStepper("FPS:", this.fps, x + 465, btnY);
+    this.drawStepper("Len:", this.lengthSec + "s", x + 280, btnY);
+    this.drawStepper("FPS:", this.fps, x + 395, btnY);
     
     // Group 3: Format & Render Studio CTA
-    let fmtCol = this.exportFormat === 'gif' ? Theme.ACCENT : Theme.BG;
-    this.drawButton("Fmt: " + this.exportFormat.toUpperCase(), x + 580, btnY, 80, 30, fmtCol);
+    let isGif = this.exportFormat === 'gif';
+    this.drawButton("Fmt: " + this.exportFormat.toUpperCase(), x + 500, btnY, 80, 32, isGif ? Theme.ACCENT : null);
     
-    let renderCol = this.isRendering ? '#E76F51' : Theme.ACCENT;
-    this.drawButton(this.isRendering ? "Rendering..." : "🎬 Render Studio", x + 670, btnY, 130, 30, renderCol);
+    this.drawButton(this.isRendering ? "Rendering..." : "🎬 Render Studio", x + 590, btnY, 130, 32, Theme.ACCENT);
     
     pop();
     
@@ -213,24 +210,34 @@ class Animator {
     noStroke();
     textAlign(RIGHT, CENTER);
     textSize(Theme.FONT_SIZE_SMALL);
-    text(label, bx - 6, by + 15);
+    text(label, bx, by + 16);
     
-    this.drawButton("-", bx, by, 26, 30);
+    this.drawButton("-", bx + 6, by, 26, 32);
     
     fill(Theme.TEXT_COLOR);
     noStroke();
     textAlign(CENTER, CENTER);
-    text(valStr, bx + 45, by + 15);
+    textSize(12);
+    text(valStr, bx + 48, by + 16);
     
-    this.drawButton("+", bx + 65, by, 26, 30);
+    this.drawButton("+", bx + 68, by, 26, 32);
   }
   
-  drawButton(txt, bx, by, bw, bh, col = Theme.BG) {
-    fill(col);
-    stroke(Theme.BORDER);
+  drawButton(txt, bx, by, bw, bh, activeCol = null) {
+    let isHover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+    
+    if (activeCol === Theme.ACCENT) {
+      fill(Theme.ACCENT);
+      stroke(Theme.ACCENT);
+    } else {
+      fill(isHover ? "rgba(0, 0, 0, 0.06)" : "rgba(0, 0, 0, 0.03)");
+      stroke(Theme.BORDER);
+    }
+    
     strokeWeight(1);
     rect(bx, by, bw, bh, 6);
-    fill(col === Theme.ACCENT || col === '#E76F51' || col === '#2EC4B6' ? '#FFFFFF' : Theme.TEXT_COLOR);
+    
+    fill(activeCol === Theme.ACCENT ? Theme.BG : Theme.TEXT_COLOR);
     noStroke();
     textAlign(CENTER, CENTER);
     textSize(12);
@@ -260,8 +267,8 @@ class Animator {
     let frameY = cvsY + (cvsH - frameH) / 2;
     
     push();
-    // Semi-transparent viewport mask
-    fill(0, 0, 0, 140);
+    // Semi-transparent viewport mask (soft slate dimming matching Theme)
+    fill(43, 45, 66, 120);
     noStroke();
     // Top
     rect(cvsX, cvsY, cvsW, frameY - cvsY);
@@ -282,7 +289,7 @@ class Animator {
     fill(Theme.ACCENT);
     noStroke();
     rect(frameX, frameY - 24, 210, 24, 4);
-    fill('#FFF');
+    fill(Theme.BG);
     textAlign(LEFT, CENTER);
     textSize(11);
     text(`📐 Framing: ${preset.name} (${preset.w}×${preset.h})`, frameX + 8, frameY - 12);
@@ -291,8 +298,8 @@ class Animator {
   
   drawRenderModal() {
     push();
-    // Dark Backdrop
-    fill(0, 0, 0, 160);
+    // Soft Dim Backdrop
+    fill(43, 45, 66, 140);
     noStroke();
     rect(0, 0, width, height);
     
@@ -302,16 +309,16 @@ class Animator {
     let mx = width / 2 - modalW / 2;
     let my = height / 2 - modalH / 2;
     
-    fill(Theme.BG);
+    fill(Theme.PANEL_BG);
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(mx, my, modalW, modalH, 16);
+    rect(mx, my, modalW, modalH, 14);
     
     // Header
     fill(Theme.TEXT_COLOR);
     noStroke();
     textAlign(LEFT, TOP);
-    textSize(20);
+    textSize(18);
     text("🎬 Render Studio Setup", mx + 25, my + 22);
     
     textSize(13);
@@ -319,7 +326,7 @@ class Animator {
     text("Configure video framing, export resolution, and format settings.", mx + 25, my + 48);
     
     // Preset Resolution Options
-    let py = my + 80;
+    let py = my + 78;
     text("EXPORT RESOLUTION PRESETS", mx + 25, py);
     
     let chipY = py + 18;
@@ -329,9 +336,9 @@ class Animator {
       let pYPos = chipY + i * (chipH + 6);
       let isSel = i === this.selectedPresetIdx;
       
-      fill(isSel ? "rgba(224, 122, 95, 0.12)" : "rgba(0, 0, 0, 0.03)");
+      fill(isSel ? "rgba(255, 107, 107, 0.12)" : "rgba(0, 0, 0, 0.03)");
       stroke(isSel ? Theme.ACCENT : Theme.BORDER);
-      strokeWeight(isSel ? 2 : 1);
+      strokeWeight(isSel ? 1.5 : 1);
       rect(mx + 25, pYPos, modalW - 50, chipH, 8);
       
       fill(Theme.TEXT_COLOR);
@@ -347,20 +354,20 @@ class Animator {
     }
     
     // Format & Quality Controls Row
-    let cfgY = chipY + this.exportPresets.length * (chipH + 6) + 15;
+    let cfgY = chipY + this.exportPresets.length * (chipH + 6) + 14;
     fill(Theme.TEXT_DIM);
     textAlign(LEFT, TOP);
-    textSize(12);
+    textSize(11);
     text("FORMAT & QUALITY", mx + 25, cfgY);
     
     let rowY = cfgY + 18;
     // Format toggle
     let isWebm = this.exportFormat === 'webm';
-    this.drawButton(isWebm ? "Format: WebM Video" : "Format: Animated GIF", mx + 25, rowY, 180, 32, isWebm ? Theme.ACCENT : '#2EC4B6');
+    this.drawButton(isWebm ? "Format: WebM Video" : "Format: Animated GIF", mx + 25, rowY, 180, 32, isWebm ? Theme.ACCENT : null);
     
     // Quality pass toggle
     let isCrisp = this.exportQualityPass === 1;
-    this.drawButton(isCrisp ? "Quality: Crisp Math (Pass 1)" : "Quality: Fast (Pass 2)", mx + 220, rowY, 180, 32, Theme.BG);
+    this.drawButton(isCrisp ? "Quality: Crisp Math (Pass 1)" : "Quality: Fast (Pass 2)", mx + 220, rowY, 180, 32);
     
     // Action Buttons Row (Start Baking Video / Cancel)
     let actY = my + modalH - 55;
@@ -368,8 +375,8 @@ class Animator {
     strokeWeight(1);
     line(mx + 25, actY - 12, mx + modalW - 25, actY - 12);
     
-    this.drawButton("✕ Cancel", mx + 25, actY, 100, 38, Theme.BG);
-    this.drawButton("🚀 Start Baking Video", mx + 140, actY, modalW - 165, 38, Theme.ACCENT);
+    this.drawButton("✕ Cancel", mx + 25, actY, 100, 36);
+    this.drawButton("🚀 Start Baking Video", mx + 140, actY, modalW - 165, 36, Theme.ACCENT);
     
     pop();
   }
@@ -397,7 +404,7 @@ class Animator {
       let mx = width / 2 - modalW / 2;
       let my = height / 2 - modalH / 2;
       
-      let chipY = my + 98;
+      let chipY = my + 96;
       let chipH = 34;
       
       // Preset Selection
@@ -410,7 +417,7 @@ class Animator {
       }
       
       // Format & Quality Toggles
-      let cfgY = chipY + this.exportPresets.length * (chipH + 6) + 15;
+      let cfgY = chipY + this.exportPresets.length * (chipH + 6) + 14;
       let rowY = cfgY + 18;
       if (mouseX >= mx + 25 && mouseX <= mx + 205 && mouseY >= rowY && mouseY <= rowY + 32) {
         this.exportFormat = this.exportFormat === 'webm' ? 'gif' : 'webm';
@@ -424,12 +431,12 @@ class Animator {
       // Actions
       let actY = my + modalH - 55;
       // Cancel
-      if (mouseX >= mx + 25 && mouseX <= mx + 125 && mouseY >= actY && mouseY <= actY + 38) {
+      if (mouseX >= mx + 25 && mouseX <= mx + 125 && mouseY >= actY && mouseY <= actY + 36) {
         this.showRenderModal = false;
         return true;
       }
       // Start Baking Video
-      if (mouseX >= mx + 140 && mouseX <= mx + modalW - 25 && mouseY >= actY && mouseY <= actY + 38) {
+      if (mouseX >= mx + 140 && mouseX <= mx + modalW - 25 && mouseY >= actY && mouseY <= actY + 36) {
         this.showRenderModal = false;
         this.startRender();
         return true;
@@ -443,34 +450,34 @@ class Animator {
     let w = hideUI ? width - 40 : width - 320;
     let y = height - this.h - 20;
     let trackX = x + 150;
-    let trackY = y + 26;
+    let trackY = y + 24;
     let trackW = w - 170;
-    let btnY = y + 74;
+    let btnY = y + 62;
     
-    if (this.isInside(mouseX, mouseY, x + 15, btnY, 95, 30)) { this.addKeyframe(); return true; }
-    if (this.isInside(mouseX, mouseY, x + 118, btnY, 70, 30)) { this.isPlaying = !this.isPlaying; return true; }
-    if (this.isInside(mouseX, mouseY, x + 196, btnY, 75, 30)) { this.loopColors = !this.loopColors; return true; }
+    if (this.isInside(mouseX, mouseY, x + 15, btnY, 90, 32)) { this.addKeyframe(); return true; }
+    if (this.isInside(mouseX, mouseY, x + 112, btnY, 65, 32)) { this.isPlaying = !this.isPlaying; return true; }
+    if (this.isInside(mouseX, mouseY, x + 184, btnY, 75, 32)) { this.loopColors = !this.loopColors; return true; }
     
     // Length Stepper
-    let lenStepX = x + 335;
-    if (this.isInside(mouseX, mouseY, lenStepX, btnY, 26, 30)) {
+    let lenStepX = x + 280;
+    if (this.isInside(mouseX, mouseY, lenStepX + 6, btnY, 26, 32)) {
        this.lengthSec = Math.max(1, this.lengthSec - 1);
        this.updateFrames(); return true;
     }
-    if (this.isInside(mouseX, mouseY, lenStepX + 65, btnY, 26, 30)) {
+    if (this.isInside(mouseX, mouseY, lenStepX + 68, btnY, 26, 32)) {
        this.lengthSec = Math.min(60, this.lengthSec + 1);
        this.updateFrames(); return true;
     }
     
     // FPS Stepper
-    let fpsStepX = x + 465;
-    if (this.isInside(mouseX, mouseY, fpsStepX, btnY, 26, 30)) {
+    let fpsStepX = x + 395;
+    if (this.isInside(mouseX, mouseY, fpsStepX + 6, btnY, 26, 32)) {
        if (this.fps === 60) this.fps = 30;
        else if (this.fps === 30) this.fps = 24;
        else if (this.fps === 24) this.fps = 12;
        this.updateFrames(); return true;
     }
-    if (this.isInside(mouseX, mouseY, fpsStepX + 65, btnY, 26, 30)) {
+    if (this.isInside(mouseX, mouseY, fpsStepX + 68, btnY, 26, 32)) {
        if (this.fps === 12) this.fps = 24;
        else if (this.fps === 24) this.fps = 30;
        else if (this.fps === 30) this.fps = 60;
@@ -478,13 +485,13 @@ class Animator {
     }
     
     // Format Toggle
-    if (this.isInside(mouseX, mouseY, x + 580, btnY, 80, 30)) {
+    if (this.isInside(mouseX, mouseY, x + 500, btnY, 80, 32)) {
       this.exportFormat = this.exportFormat === 'webm' ? 'gif' : 'webm';
       return true;
     }
     
     // Open Render Studio Modal
-    if (this.isInside(mouseX, mouseY, x + 670, btnY, 130, 30)) {
+    if (this.isInside(mouseX, mouseY, x + 590, btnY, 130, 32)) {
       this.showRenderModal = true;
       return true;
     }
@@ -631,7 +638,7 @@ class Animator {
   drawRenderProgress() {
     if (!this.isRendering) return;
     
-    fill(0, 0, 0, 160);
+    fill(43, 45, 66, 140);
     rect(0, 0, width, height);
     
     let boxW = 520;
@@ -639,15 +646,15 @@ class Animator {
     let bx = width/2 - boxW/2;
     let by = height/2 - boxH/2;
     
-    fill(Theme.BG);
+    fill(Theme.PANEL_BG);
     stroke(Theme.BORDER);
     strokeWeight(1);
-    rect(bx, by, boxW, boxH, 16);
+    rect(bx, by, boxW, boxH, 14);
     
     fill(Theme.TEXT_COLOR);
     noStroke();
     textAlign(CENTER, CENTER);
-    textSize(22);
+    textSize(20);
     let preset = this.exportPresets[this.selectedPresetIdx];
     text(`Baking Video (${preset.name} - ${this.exportFormat.toUpperCase()})`, width/2, by + 40);
     
@@ -656,7 +663,7 @@ class Animator {
     let barX = width/2 - barW/2;
     let barY = by + 95;
     
-    fill(Theme.PANEL_BG);
+    fill("rgba(0, 0, 0, 0.05)");
     stroke(Theme.BORDER);
     strokeWeight(1);
     rect(barX, barY, barW, barH, 10);
@@ -668,7 +675,7 @@ class Animator {
       rect(barX, barY, barW * pct, barH, 10);
     }
     
-    textSize(14);
+    textSize(13);
     fill(Theme.TEXT_COLOR);
     text(`Frame: ${this.playhead} / ${this.frames} (${Math.round(pct * 100)}%)`, width/2, barY + 40);
     
@@ -691,9 +698,6 @@ class Animator {
     let btnX = width/2 - btnW/2;
     let btnY = by + 205;
     
-    fill('#E76F51');
-    rect(btnX, btnY, btnW, btnH, 8);
-    fill('#FFF');
-    text("Cancel Render", btnX + btnW/2, btnY + btnH/2);
+    this.drawButton("Cancel Render", btnX, btnY, btnW, btnH);
   }
 }
