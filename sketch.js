@@ -63,10 +63,18 @@ function draw() {
 
   if (typeof animator !== 'undefined') animator.update();
 
-  mainCanvas.background(Theme.BG);
-  fractals[currentFractalIndex].render(mainCanvas, cam, paletteManager.current());
+  let isExporting = typeof animator !== 'undefined' && animator.isRendering;
 
-  image(mainCanvas, cvsX, cvsY);
+  if (!isExporting) {
+    mainCanvas.background(Theme.BG);
+    fractals[currentFractalIndex].render(mainCanvas, cam, paletteManager.current());
+    image(mainCanvas, cvsX, cvsY);
+  } else {
+    animator.renderFrame();
+    if (animator.exportBuffer) {
+      image(animator.exportBuffer, cvsX, cvsY, cvsW, cvsH);
+    }
+  }
 
   if (!hideUI) {
     infoOverlay.draw();
@@ -104,8 +112,7 @@ function draw() {
     animator.draw();
   }
 
-  if (typeof animator !== 'undefined' && animator.isRendering) {
-    animator.renderFrame();
+  if (isExporting) {
     animator.drawRenderProgress();
   }
 

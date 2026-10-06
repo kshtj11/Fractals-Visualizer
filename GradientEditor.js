@@ -189,7 +189,7 @@ class GradientEditor {
     let barH = 20;
     let sy = barY + barH;
     
-    // 1. Check Color Stop Node Click
+    // 1. Check Color Stop Node Click (handles/triangles)
     for (let i = pal.stops.length - 1; i >= 0; i--) {
       let s = pal.stops[i];
       let sx = barX + s.t * barW;
@@ -200,6 +200,22 @@ class GradientEditor {
         this.figmaPicker.open(s, mouseX, mouseY);
         return true;
       }
+    }
+
+    // 2. Direct Spectrum Bar Click (adds new color stop with exact color already present)
+    if (mouseX >= barX && mouseX <= barX + barW && mouseY >= barY && mouseY <= barY + barH) {
+      if (pal.stops.length < 8) {
+        let t = (mouseX - barX) / barW;
+        let sampledCol = pal.sample(t);
+        let newStop = pal.addStop(t, sampledCol);
+        if (newStop) {
+          this.selectedStop = newStop;
+          this.draggingStop = newStop;
+          this.figmaPicker.open(newStop, mouseX, mouseY);
+          globalDirty = true;
+        }
+      }
+      return true;
     }
     
     // Expanded View Interactivity

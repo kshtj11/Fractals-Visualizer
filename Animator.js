@@ -247,8 +247,8 @@ class Animator {
   drawFramingOverlay() {
     let cvsX = hideUI ? 0 : 280;
     let cvsY = hideUI ? 0 : 60;
-    let cvsW = hideUI ? width : width - 280;
-    let cvsH = hideUI ? height : height - 60;
+    let cvsW = hideUI ? width : width - 580; // Main viewport between left and right sidebars
+    let cvsH = hideUI ? height : height - 180;
     
     let preset = this.exportPresets[this.selectedPresetIdx];
     let targetAspect = preset.w / preset.h;
